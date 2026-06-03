@@ -24,6 +24,8 @@ bellows init
 ```
 
 The generated config includes detected workflows, default act runner mappings, and Blacksmith mappings when Blacksmith labels are present.
+Dynamic runner expressions such as `${{ matrix.os }}` are reported as
+matrix-dependent diagnostics instead of literal unmapped runner labels.
 
 Use pre-commit integration during setup:
 
@@ -90,6 +92,7 @@ event: pull_request
 runner:
   map:
     ubuntu-latest: catthehacker/ubuntu:act-22.04
+    macos-latest: catthehacker/ubuntu:act-22.04
     ubuntu-22.04: catthehacker/ubuntu:act-22.04
     blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
 precommit:
@@ -140,6 +143,8 @@ runner:
 ```
 
 Cloud-only Blacksmith behavior, larger CPU and memory guarantees, GPUs, OIDC, deployment environments, and proprietary acceleration are not locally emulated.
+macOS labels may be mapped to Ubuntu act images for local compatibility, but
+macOS itself is not emulated.
 
 ## License
 

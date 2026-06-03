@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: bellows
+        name: Run GitHub Actions locally with Bellows
+        entry: bellows run --precommit
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

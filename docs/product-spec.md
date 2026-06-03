@@ -24,6 +24,9 @@ Longer positioning:
 - Default to `pre-push` so full workflows do not slow down every commit.
 - Support migration from GitHub-hosted runners and Blacksmith workers with
   runner label mappings.
+- Report dynamic `runs-on` expressions such as `${{ matrix.os }}` as
+  matrix-dependent diagnostics instead of treating them as literal runner
+  labels.
 - Use `act` as the workflow execution backend instead of implementing a custom
   GitHub Actions runner.
 - Provide a `doctor` command that identifies unsupported or risky workflow

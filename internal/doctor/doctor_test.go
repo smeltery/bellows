@@ -49,6 +49,35 @@ func TestAnalyzeReportsUnmappedRunner(t *testing.T) {
 	assertFinding(t, findings, "error", "job gpu uses unmapped runner blacksmith-gpu-ubuntu-2204")
 }
 
+func TestAnalyzeWarnsForDynamicRunnerExpressions(t *testing.T) {
+	wf := workflow.Workflow{
+		Path: ".github/workflows/ci.yml",
+		Jobs: map[string]workflow.Job{
+			"test": {RunsOn: []string{"${{ matrix.os }}"}},
+		},
+	}
+
+	findings := Analyze(config.DefaultConfig(), []workflow.Workflow{wf})
+	assertFinding(t, findings, "warn", "dynamic runner expression")
+	for _, finding := range findings {
+		if strings.Contains(finding.Message, "unmapped runner") {
+			t.Fatalf("dynamic runner should not be reported as unmapped: %#v", findings)
+		}
+	}
+}
+
+func TestAnalyzeReportsMacOSCompatibilityMapping(t *testing.T) {
+	wf := workflow.Workflow{
+		Path: ".github/workflows/ci.yml",
+		Jobs: map[string]workflow.Job{
+			"test": {RunsOn: []string{"macos-latest"}},
+		},
+	}
+
+	findings := Analyze(config.DefaultConfig(), []workflow.Workflow{wf})
+	assertFinding(t, findings, "ok", "macOS runner compatibility mapping macos-latest maps to catthehacker/ubuntu:act-22.04")
+}
+
 func assertFinding(t *testing.T, findings []Finding, level, message string) {
 	t.Helper()
 	for _, finding := range findings {

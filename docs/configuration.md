@@ -21,6 +21,7 @@ runner:
   map:
     ubuntu-latest: catthehacker/ubuntu:act-22.04
     ubuntu-22.04: catthehacker/ubuntu:act-22.04
+    macos-latest: catthehacker/ubuntu:act-22.04
     blacksmith-2vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
     blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
 
@@ -98,6 +99,7 @@ runner:
   default_image: catthehacker/ubuntu:act-22.04
   map:
     ubuntu-latest: catthehacker/ubuntu:act-22.04
+    macos-latest: catthehacker/ubuntu:act-22.04
 ```
 
 If a workflow uses an unmapped `runs-on` label, Bellows:
@@ -176,6 +178,10 @@ runner:
 ```
 
 Add Blacksmith mappings only when Blacksmith runner labels are detected.
+
+macOS runner labels may be mapped to Ubuntu-based act images for local
+compatibility. This catches some cross-platform failures locally but does not
+emulate macOS.
 
 ## Related Commands
 

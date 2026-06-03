@@ -45,6 +45,7 @@ event: pull_request
 runner:
   map:
     ubuntu-latest: catthehacker/ubuntu:act-22.04
+    macos-latest: catthehacker/ubuntu:act-22.04
     blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
 precommit:
   stage: pre-push
@@ -101,6 +102,11 @@ runner:
 ```
 
 Run `bellows doctor` to see which labels are mapped locally. See [docs/blacksmith.md](docs/blacksmith.md).
+
+For workflows with OS matrices, Bellows reports dynamic runner expressions such
+as `${{ matrix.os }}` as matrix-dependent diagnostics. `macos-*` labels can map
+to Ubuntu-based act images as a local compatibility fallback; this does not
+emulate macOS.
 
 ## License
 

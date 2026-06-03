@@ -25,11 +25,17 @@ func Analyze(cfg *config.Config, workflows []workflow.Workflow) []Finding {
 		findings = append(findings, Finding{"info", fmt.Sprintf("workflow %s has jobs: %s", wf.Path, strings.Join(workflow.JobIDs(wf), ", "))})
 		for id, job := range wf.Jobs {
 			for _, label := range job.RunsOn {
+				if strings.Contains(label, "${{") {
+					findings = append(findings, Finding{"warn", fmt.Sprintf("job %s uses dynamic runner expression %s; Bellows relies on act matrix expansion for the concrete label", id, label)})
+					continue
+				}
 				image, ok := runner.Resolve(label, cfg.Runner)
 				if ok {
 					prefix := "runner"
 					if runner.IsBlacksmith(label) {
 						prefix = "Blacksmith runner"
+					} else if strings.HasPrefix(label, "macos-") {
+						prefix = "macOS runner compatibility mapping"
 					}
 					findings = append(findings, Finding{"ok", fmt.Sprintf("%s %s maps to %s", prefix, label, image)})
 				} else {

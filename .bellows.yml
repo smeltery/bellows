@@ -1,0 +1,15 @@
+version: 1
+default_workflows:
+    - ci.yml
+event: pull_request
+docker:
+    pull: missing
+runner:
+    map:
+        ubuntu-latest: catthehacker/ubuntu:act-22.04
+secrets:
+    mode: none
+precommit:
+    stage: pre-push
+    mode: full
+    timeout_seconds: 900

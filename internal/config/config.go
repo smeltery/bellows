@@ -62,6 +62,9 @@ func DefaultConfig() *Config {
 				"ubuntu-latest": "catthehacker/ubuntu:act-22.04",
 				"ubuntu-22.04":  "catthehacker/ubuntu:act-22.04",
 				"ubuntu-24.04":  "catthehacker/ubuntu:act-24.04",
+				"macos-latest":  "catthehacker/ubuntu:act-22.04",
+				"macos-14":      "catthehacker/ubuntu:act-22.04",
+				"macos-15":      "catthehacker/ubuntu:act-22.04",
 			},
 		},
 		Secrets: SecretsConfig{
@@ -184,7 +187,7 @@ func Minimal(workflows []string, runnerLabels []string) *Config {
 
 func DefaultRunnerImage(label string) (string, bool) {
 	switch label {
-	case "ubuntu-latest", "ubuntu-22.04",
+	case "ubuntu-latest", "ubuntu-22.04", "macos-latest", "macos-14", "macos-15",
 		"blacksmith-2vcpu-ubuntu-2204", "blacksmith-4vcpu-ubuntu-2204", "blacksmith-8vcpu-ubuntu-2204":
 		return "catthehacker/ubuntu:act-22.04", true
 	case "ubuntu-24.04",

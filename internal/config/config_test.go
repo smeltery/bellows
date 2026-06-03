@@ -22,6 +22,9 @@ func TestDefaultConfig(t *testing.T) {
 	if _, ok := cfg.Runner.Map["blacksmith-4vcpu-ubuntu-2204"]; ok {
 		t.Error("default config should stay minimal until Blacksmith labels are detected")
 	}
+	if got := cfg.Runner.Map["macos-latest"]; got != "catthehacker/ubuntu:act-22.04" {
+		t.Errorf("macos-latest map = %q", got)
+	}
 }
 
 func TestLoad_NoFile(t *testing.T) {
@@ -84,13 +87,16 @@ func TestLoadFrom_PartialConfigKeepsDefaults(t *testing.T) {
 	}
 }
 
-func TestMinimalAddsDetectedBlacksmithMappings(t *testing.T) {
-	cfg := Minimal([]string{"ci.yml"}, []string{"blacksmith-4vcpu-ubuntu-2204"})
+func TestMinimalAddsDetectedRunnerMappings(t *testing.T) {
+	cfg := Minimal([]string{"ci.yml"}, []string{"blacksmith-4vcpu-ubuntu-2204", "macos-latest"})
 	if !reflect.DeepEqual(cfg.DefaultWorkflows, []string{"ci.yml"}) {
 		t.Fatalf("DefaultWorkflows = %#v", cfg.DefaultWorkflows)
 	}
 	if got := cfg.Runner.Map["blacksmith-4vcpu-ubuntu-2204"]; got != "catthehacker/ubuntu:act-22.04" {
 		t.Errorf("blacksmith map = %q", got)
+	}
+	if got := cfg.Runner.Map["macos-latest"]; got != "catthehacker/ubuntu:act-22.04" {
+		t.Errorf("macos map = %q", got)
 	}
 }
 

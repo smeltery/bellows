@@ -30,7 +30,8 @@ func newRootCmd(version string) *cobra.Command {
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
 		},
-		Version: version,
+		Version:      version,
+		SilenceUsage: true,
 	}
 
 	root.SetVersionTemplate(fmt.Sprintf("bellows version %s\n", version))
