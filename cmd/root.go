@@ -134,9 +134,9 @@ func newRunCmd(opts *cliOptions) *cobra.Command {
 				}
 				if err := runPassthrough(root, "act", args...); err != nil {
 					if job != "" {
-						return fmt.Errorf("Bellows failed while running %s job %s\nRerun: bellows run --workflow %s --job %s", display, job, display, job)
+						return fmt.Errorf("bellows failed while running %s job %s\nrerun: bellows run --workflow %s --job %s", display, job, display, job)
 					}
-					return fmt.Errorf("Bellows failed while running %s\nRerun: bellows run --workflow %s", display, display)
+					return fmt.Errorf("bellows failed while running %s\nrerun: bellows run --workflow %s", display, display)
 				}
 			}
 			return nil
@@ -272,7 +272,7 @@ func requireDocker() error {
 	ctx := context.Background()
 	cmd := exec.CommandContext(ctx, "docker", "info")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("Docker is not reachable. Start Docker and rerun bellows")
+		return fmt.Errorf("docker is not reachable; start Docker and rerun bellows")
 	}
 	return nil
 }
