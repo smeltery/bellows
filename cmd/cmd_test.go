@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dotbrains/bellows/internal/plan"
 )
 
 func TestExecuteVersion(t *testing.T) {
@@ -192,6 +194,30 @@ jobs:
 	}
 }
 
+func TestDoctorFixDryRunDoesNotWriteConfig(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflow(t, repo, "ci.yml", "blacksmith-16vcpu-ubuntu-2404")
+	original := "version: 1\nrunner:\n  map: {}\n"
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte(original), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "doctor", "--fix", "--fix-dry-run"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "[fix] mapped runner blacksmith-16vcpu-ubuntu-2404") {
+		t.Fatalf("dry-run output missing fix preview:\n%s", buf.String())
+	}
+	if got := readFile(t, filepath.Join(repo, ".bellows.yml")); got != original {
+		t.Fatalf("fix dry-run changed config:\n%s", got)
+	}
+}
+
 func TestDoctorCommandSupportsJSON(t *testing.T) {
 	repo := t.TempDir()
 	writeWorkflow(t, repo, "ci.yml", "blacksmith-4vcpu-ubuntu-2204")
@@ -294,16 +320,16 @@ func TestSampleRepoFixtureExplainsMigrationPlan(t *testing.T) {
 	if err := root.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	var plan executionPlan
-	if err := json.Unmarshal(buf.Bytes(), &plan); err != nil {
+	var executionPlan plan.Plan
+	if err := json.Unmarshal(buf.Bytes(), &executionPlan); err != nil {
 		t.Fatalf("invalid fixture plan JSON: %v\n%s", err, buf.String())
 	}
-	if len(plan.Workflows) != 1 {
-		t.Fatalf("workflow count = %d, want 1", len(plan.Workflows))
+	if len(executionPlan.Workflows) != 1 {
+		t.Fatalf("workflow count = %d, want 1", len(executionPlan.Workflows))
 	}
 	var sawBlacksmith bool
 	var sawSkippedPublish bool
-	for _, job := range plan.Workflows[0].Jobs {
+	for _, job := range executionPlan.Workflows[0].Jobs {
 		if job.ID == "test" && strings.Join(job.RunnerImages, ",") == "ubuntu-latest=catthehacker/ubuntu:act-22.04,blacksmith-4vcpu-ubuntu-2404=catthehacker/ubuntu:act-24.04" {
 			sawBlacksmith = true
 		}
@@ -312,7 +338,21 @@ func TestSampleRepoFixtureExplainsMigrationPlan(t *testing.T) {
 		}
 	}
 	if !sawBlacksmith || !sawSkippedPublish {
-		t.Fatalf("fixture plan missing expected migration details: %#v", plan)
+		t.Fatalf("fixture plan missing expected migration details: %#v", executionPlan)
+	}
+}
+
+func TestCompletionCommandGeneratesZsh(t *testing.T) {
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"completion", "zsh"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "#compdef bellows") {
+		t.Fatalf("unexpected completion output:\n%s", buf.String())
 	}
 }
 

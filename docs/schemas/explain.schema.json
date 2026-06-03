@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/dotbrains/bellows/main/docs/schemas/explain.schema.json",
+  "title": "Bellows execution plan",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "event": {
+      "type": "string",
+      "minLength": 1
+    },
+    "default_workflows": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "workflows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "runs_on": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "runner_images": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "skipped": { "type": "boolean" }
+              },
+              "required": ["id", "skipped"]
+            }
+          }
+        },
+        "required": ["path", "jobs"]
+      }
+    }
+  },
+  "required": ["event", "default_workflows", "workflows"]
+}

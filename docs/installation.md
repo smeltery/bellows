@@ -48,6 +48,22 @@ bellows doctor
 
 `bellows doctor` reports whether `act` is available and Docker is reachable.
 
+## Shell Completions
+
+Generate completions with:
+
+```sh
+bellows completion zsh
+bellows completion bash
+bellows completion fish
+```
+
+For zsh with Homebrew:
+
+```sh
+bellows completion zsh > "$(brew --prefix)/share/zsh/site-functions/_bellows"
+```
+
 ## Optional: pre-commit
 
 Bellows can generate a hook for the `pre-commit` framework.

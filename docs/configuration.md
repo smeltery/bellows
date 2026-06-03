@@ -2,6 +2,9 @@
 
 Bellows uses `.bellows.yml` at the repository root.
 
+JSON Schema is available at
+[`docs/schemas/bellows.schema.json`](schemas/bellows.schema.json).
+
 ## Example
 
 ```yaml
@@ -217,3 +220,8 @@ bellows cache prune
 
 `bellows doctor` validates this file and reports unmapped runner labels,
 unsupported workflow features, and missing Docker or `act` dependencies.
+
+Machine-readable outputs also have schemas:
+
+- [`docs/schemas/doctor.schema.json`](schemas/doctor.schema.json)
+- [`docs/schemas/explain.schema.json`](schemas/explain.schema.json)

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/dotbrains/bellows/main/docs/schemas/doctor.schema.json",
+  "title": "Bellows doctor findings",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "level": {
+        "type": "string",
+        "enum": ["error", "warn", "ok", "info"]
+      },
+      "code": {
+        "type": "string",
+        "minLength": 1
+      },
+      "workflow": {
+        "type": "string"
+      },
+      "job": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string",
+        "minLength": 1
+      },
+      "suggestion": {
+        "type": "string"
+      }
+    },
+    "required": ["level", "code", "message"]
+  }
+}

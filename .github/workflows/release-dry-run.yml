@@ -1,0 +1,29 @@
+name: Release Dry Run
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  goreleaser-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --snapshot --clean --skip=publish
+
+      - name: Verify release artifacts
+        run: |
+          test -f dist/checksums.txt
+          test -f dist/bellows_linux_amd64.tar.gz
+          test -f dist/bellows_darwin_arm64.tar.gz

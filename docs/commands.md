@@ -32,6 +32,7 @@ bellows doctor
 bellows doctor --format json
 bellows doctor --strict
 bellows doctor --fix
+bellows doctor --fix --fix-dry-run
 ```
 
 Doctor checks workflow discovery, runner mappings, dynamic runner expressions,
@@ -61,6 +62,9 @@ warnings should block a push.
 - add mappings for known runner labels;
 - add cloud-like job ids such as `deploy`, `publish`, and `release` to
   `skip.jobs`.
+
+`--fix --fix-dry-run` prints the same fix plan and reports diagnostics using the
+fixed in-memory config, but does not write `.bellows.yml`.
 
 ## `bellows explain`
 
@@ -109,4 +113,14 @@ Prune Docker builder cache used during local workflow runs.
 
 ```sh
 bellows cache prune
+```
+
+## `bellows completion`
+
+Generate shell completion scripts.
+
+```sh
+bellows completion bash
+bellows completion zsh
+bellows completion fish
 ```

@@ -110,7 +110,9 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 | `bellows doctor --format json` | Emit stable diagnostics for automation and agents. |
 | `bellows doctor --strict` | Fail when warnings are present. |
 | `bellows doctor --fix` | Apply safe `.bellows.yml` fixes. |
+| `bellows doctor --fix --fix-dry-run` | Preview safe `.bellows.yml` fixes without writing. |
 | `bellows explain --format json` | Emit the resolved local execution plan as JSON. |
+| `bellows completion zsh` | Generate shell completions. |
 | `bellows cache prune` | Prune Docker builder cache used during local workflow runs. |
 
 ## Documentation
@@ -119,6 +121,7 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 - [Installation](docs/installation.md)
 - [Commands](docs/commands.md)
 - [Configuration](docs/configuration.md)
+- [JSON Schemas](docs/schemas)
 - [Local Differences](docs/local-differences.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Security](docs/security.md)

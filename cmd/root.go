@@ -14,32 +14,14 @@ import (
 	"github.com/dotbrains/bellows/internal/act"
 	"github.com/dotbrains/bellows/internal/config"
 	"github.com/dotbrains/bellows/internal/doctor"
+	"github.com/dotbrains/bellows/internal/plan"
 	"github.com/dotbrains/bellows/internal/precommit"
-	"github.com/dotbrains/bellows/internal/runner"
 	"github.com/dotbrains/bellows/internal/workflow"
 	"github.com/spf13/cobra"
 )
 
 type cliOptions struct {
 	repoRoot string
-}
-
-type executionPlan struct {
-	Event            string         `json:"event"`
-	DefaultWorkflows []string       `json:"default_workflows"`
-	Workflows        []workflowPlan `json:"workflows"`
-}
-
-type workflowPlan struct {
-	Path string    `json:"path"`
-	Jobs []jobPlan `json:"jobs"`
-}
-
-type jobPlan struct {
-	ID           string   `json:"id"`
-	RunsOn       []string `json:"runs_on,omitempty"`
-	RunnerImages []string `json:"runner_images,omitempty"`
-	Skipped      bool     `json:"skipped"`
 }
 
 func newRootCmd(version string) *cobra.Command {
@@ -63,6 +45,7 @@ func newRootCmd(version string) *cobra.Command {
 	root.AddCommand(newDoctorCmd(opts))
 	root.AddCommand(newCacheCmd())
 	root.AddCommand(newExplainCmd(opts))
+	root.AddCommand(newCompletionCmd(root))
 
 	return root
 }
@@ -148,8 +131,12 @@ func newRunCmd(opts *cliOptions) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				plan := buildExecutionPlan(cfg, workflows, refs, event, job)
-				printExecutionPlan(cmd, plan)
+				executionPlan := plan.Build(cfg, workflows, plan.Options{
+					WorkflowRefs:  refs,
+					EventOverride: event,
+					JobFilter:     job,
+				})
+				printExecutionPlan(cmd, executionPlan)
 				return nil
 			}
 			if err := requireDependency("act"); err != nil {
@@ -195,6 +182,7 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 	var format string
 	var strict bool
 	var fix bool
+	var fixDryRun bool
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Inspect local GitHub Actions compatibility",
@@ -212,7 +200,7 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 				return err
 			}
 			if fix {
-				fixes, err := applyDoctorFixes(root, cfg, workflows)
+				fixes, fixedCfg, err := doctorFixes(cfg, workflows)
 				if err != nil {
 					return err
 				}
@@ -221,9 +209,15 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 						cmd.Printf("[fix] %s\n", msg)
 					}
 				}
-				cfg, err = config.Load(root)
-				if err != nil {
-					return err
+				cfg = fixedCfg
+				if !fixDryRun && len(fixes) > 0 && fixes[0] != "no safe fixes available" {
+					if err := config.SaveTo(cfg, filepath.Join(root, config.FileName)); err != nil {
+						return err
+					}
+					cfg, err = config.Load(root)
+					if err != nil {
+						return err
+					}
 				}
 			}
 			findings := doctor.Analyze(cfg, workflows)
@@ -260,6 +254,7 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text or json")
 	cmd.Flags().BoolVar(&strict, "strict", false, "fail when warnings are found")
 	cmd.Flags().BoolVar(&fix, "fix", false, "apply safe .bellows.yml fixes before reporting diagnostics")
+	cmd.Flags().BoolVar(&fixDryRun, "fix-dry-run", false, "preview safe .bellows.yml fixes without writing files")
 	return cmd
 }
 
@@ -281,6 +276,26 @@ func newCacheCmd() *cobra.Command {
 	return cmd
 }
 
+func newCompletionCmd(root *cobra.Command) *cobra.Command {
+	return &cobra.Command{
+		Use:   "completion [bash|zsh|fish]",
+		Short: "Generate shell completion scripts",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			switch args[0] {
+			case "bash":
+				return root.GenBashCompletion(cmd.OutOrStdout())
+			case "zsh":
+				return root.GenZshCompletion(cmd.OutOrStdout())
+			case "fish":
+				return root.GenFishCompletion(cmd.OutOrStdout(), true)
+			default:
+				return fmt.Errorf("unsupported shell %q", args[0])
+			}
+		},
+	}
+}
+
 func newExplainCmd(opts *cliOptions) *cobra.Command {
 	var format string
 	cmd := &cobra.Command{
@@ -299,14 +314,14 @@ func newExplainCmd(opts *cliOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			plan := buildExecutionPlan(cfg, workflows, cfg.DefaultWorkflows, "", "")
+			executionPlan := plan.Build(cfg, workflows, plan.Options{WorkflowRefs: cfg.DefaultWorkflows})
 			if format == "json" {
-				return json.NewEncoder(cmd.OutOrStdout()).Encode(plan)
+				return json.NewEncoder(cmd.OutOrStdout()).Encode(executionPlan)
 			}
 			if format != "text" {
 				return fmt.Errorf("unsupported format %q", format)
 			}
-			printExecutionPlan(cmd, plan)
+			printExecutionPlan(cmd, executionPlan)
 			return nil
 		},
 	}
@@ -351,37 +366,43 @@ func dependencyFindings() []doctor.Finding {
 	return findings
 }
 
-func applyDoctorFixes(root string, cfg *config.Config, workflows []workflow.Workflow) ([]string, error) {
+func doctorFixes(cfg *config.Config, workflows []workflow.Workflow) ([]string, *config.Config, error) {
+	fixed := *cfg
+	fixed.Runner.Map = map[string]string{}
+	for label, image := range cfg.Runner.Map {
+		fixed.Runner.Map[label] = image
+	}
+	fixed.Skip.Jobs = append([]string(nil), cfg.Skip.Jobs...)
 	var messages []string
 	for _, label := range workflow.Labels(workflows) {
-		if cfg.Runner.Map == nil {
-			cfg.Runner.Map = map[string]string{}
+		if fixed.Runner.Map == nil {
+			fixed.Runner.Map = map[string]string{}
 		}
-		if cfg.Runner.Map[label] != "" {
+		if fixed.Runner.Map[label] != "" {
 			continue
 		}
 		image, ok := config.DefaultRunnerImage(label)
 		if !ok {
 			continue
 		}
-		cfg.Runner.Map[label] = image
+		fixed.Runner.Map[label] = image
 		messages = append(messages, fmt.Sprintf("mapped runner %s to %s", label, image))
 	}
 	seenSkip := map[string]bool{}
-	for _, job := range cfg.Skip.Jobs {
+	for _, job := range fixed.Skip.Jobs {
 		seenSkip[job] = true
 	}
 	for _, job := range workflow.CloudLikeJobIDs(workflows) {
 		if seenSkip[job] {
 			continue
 		}
-		cfg.Skip.Jobs = append(cfg.Skip.Jobs, job)
+		fixed.Skip.Jobs = append(fixed.Skip.Jobs, job)
 		messages = append(messages, fmt.Sprintf("added %s to skip.jobs", job))
 	}
 	if len(messages) == 0 {
-		return []string{"no safe fixes available"}, nil
+		return []string{"no safe fixes available"}, &fixed, nil
 	}
-	return messages, config.SaveTo(cfg, filepath.Join(root, config.FileName))
+	return messages, &fixed, nil
 }
 
 func printGroupedFindings(cmd *cobra.Command, findings []doctor.Finding) {
@@ -446,48 +467,10 @@ func printFinding(cmd *cobra.Command, finding doctor.Finding) {
 	}
 }
 
-func buildExecutionPlan(cfg *config.Config, workflows []workflow.Workflow, refs []string, eventOverride, jobFilter string) executionPlan {
-	event := eventOverride
-	if event == "" {
-		event = cfg.Event
-	}
-	plan := executionPlan{
-		Event:            event,
-		DefaultWorkflows: append([]string(nil), cfg.DefaultWorkflows...),
-	}
-	for _, wf := range workflows {
-		if len(refs) > 0 && !workflowSelected(wf, refs) {
-			continue
-		}
-		wp := workflowPlan{Path: wf.Path}
-		for _, id := range workflow.JobIDs(wf) {
-			if jobFilter != "" && id != jobFilter {
-				continue
-			}
-			job := wf.Jobs[id]
-			jp := jobPlan{
-				ID:      id,
-				RunsOn:  append([]string(nil), job.RunsOn...),
-				Skipped: contains(cfg.Skip.Jobs, id),
-			}
-			for _, label := range job.RunsOn {
-				for _, resolved := range resolvedRunnerLabels(label, job.Matrix) {
-					if image, ok := runner.Resolve(resolved, cfg.Runner); ok {
-						jp.RunnerImages = append(jp.RunnerImages, fmt.Sprintf("%s=%s", resolved, image))
-					}
-				}
-			}
-			wp.Jobs = append(wp.Jobs, jp)
-		}
-		plan.Workflows = append(plan.Workflows, wp)
-	}
-	return plan
-}
-
-func printExecutionPlan(cmd *cobra.Command, plan executionPlan) {
-	cmd.Printf("event: %s\n", plan.Event)
-	cmd.Printf("default workflows: %s\n", strings.Join(plan.DefaultWorkflows, ", "))
-	for _, wf := range plan.Workflows {
+func printExecutionPlan(cmd *cobra.Command, executionPlan plan.Plan) {
+	cmd.Printf("event: %s\n", executionPlan.Event)
+	cmd.Printf("default workflows: %s\n", strings.Join(executionPlan.DefaultWorkflows, ", "))
+	for _, wf := range executionPlan.Workflows {
 		cmd.Printf("%s\n", wf.Path)
 		for _, job := range wf.Jobs {
 			status := "run"
@@ -501,36 +484,6 @@ func printExecutionPlan(cmd *cobra.Command, plan executionPlan) {
 			cmd.Println()
 		}
 	}
-}
-
-func workflowSelected(wf workflow.Workflow, refs []string) bool {
-	for _, ref := range refs {
-		if ref == wf.Path || ref == filepath.Base(wf.Path) {
-			return true
-		}
-	}
-	return false
-}
-
-func resolvedRunnerLabels(label string, matrix map[string][]string) []string {
-	if !strings.Contains(label, "${{") {
-		return []string{label}
-	}
-	for key, values := range matrix {
-		if strings.Contains(label, "matrix."+key) {
-			return values
-		}
-	}
-	return nil
-}
-
-func contains(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
 }
 
 func requireDocker() error {
