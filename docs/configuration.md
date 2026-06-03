@@ -24,6 +24,10 @@ runner:
     macos-latest: catthehacker/ubuntu:act-22.04
     blacksmith-2vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
     blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
+    blacksmith-8vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
+    blacksmith-16vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
+    blacksmith-32vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
+    blacksmith-4vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
 
 secrets:
   mode: env
@@ -181,6 +185,8 @@ runner:
 ```
 
 Add Blacksmith mappings only when Blacksmith runner labels are detected.
+Known Blacksmith Ubuntu 22.04 and 24.04 labels from 2 to 32 vCPU are mapped to
+the closest `catthehacker/ubuntu` act image.
 
 macOS runner labels may be mapped to Ubuntu-based act images for local
 compatibility. This catches some cross-platform failures locally but does not

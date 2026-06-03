@@ -2,10 +2,29 @@ name: Smoke
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to smoke test
+        required: false
   release:
     types: [published]
 
 jobs:
+  go-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      - name: Install Bellows with Go
+        run: GOPROXY=direct go install github.com/dotbrains/bellows@latest
+
+      - name: Check installed binary
+        run: |
+          bellows --version
+          bellows --help
+
   homebrew-install:
     runs-on: macos-latest
     steps:
@@ -13,8 +32,25 @@ jobs:
         run: |
           brew tap dotbrains/tap
           brew install --cask dotbrains/tap/bellows
+          brew audit --cask dotbrains/tap/bellows --online
 
       - name: Check installed binary
         run: |
           bellows --version
           bellows --help
+
+  release-archive:
+    if: github.event_name == 'release' || inputs.tag != ''
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Download release artifacts
+        run: gh release download "$TAG" --repo dotbrains/bellows --pattern "bellows_*_linux_amd64.tar.gz" --dir dist
+
+      - name: Check archive binary
+        run: |
+          tar -xzf dist/bellows_*_linux_amd64.tar.gz -C dist
+          dist/bellows --version
+          dist/bellows --help

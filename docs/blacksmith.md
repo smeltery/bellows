@@ -31,9 +31,13 @@ runner:
     blacksmith-2vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
     blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
     blacksmith-8vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
+    blacksmith-16vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
+    blacksmith-32vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
     blacksmith-2vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
     blacksmith-4vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
     blacksmith-8vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
+    blacksmith-16vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
+    blacksmith-32vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
 ```
 
 If an image tag is unavailable, Bellows uses the closest stable `act` image and reports

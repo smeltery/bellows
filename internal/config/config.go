@@ -105,14 +105,22 @@ func SaveTo(cfg *Config, path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("creating config directory: %w", err)
 	}
-	data, err := yaml.Marshal(cfg)
+	data, err := Marshal(cfg)
 	if err != nil {
-		return fmt.Errorf("marshaling config: %w", err)
+		return err
 	}
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("writing config: %w", err)
 	}
 	return nil
+}
+
+func Marshal(cfg *Config) ([]byte, error) {
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling config: %w", err)
+	}
+	return data, nil
 }
 
 func (c *Config) ApplyDefaults() {
@@ -189,10 +197,12 @@ func Minimal(workflows []string, runnerLabels []string, skippedJobs ...string) *
 func DefaultRunnerImage(label string) (string, bool) {
 	switch label {
 	case "ubuntu-latest", "ubuntu-22.04", "macos-latest", "macos-14", "macos-15",
-		"blacksmith-2vcpu-ubuntu-2204", "blacksmith-4vcpu-ubuntu-2204", "blacksmith-8vcpu-ubuntu-2204":
+		"blacksmith-2vcpu-ubuntu-2204", "blacksmith-4vcpu-ubuntu-2204", "blacksmith-8vcpu-ubuntu-2204",
+		"blacksmith-16vcpu-ubuntu-2204", "blacksmith-32vcpu-ubuntu-2204":
 		return "catthehacker/ubuntu:act-22.04", true
 	case "ubuntu-24.04",
-		"blacksmith-2vcpu-ubuntu-2404", "blacksmith-4vcpu-ubuntu-2404", "blacksmith-8vcpu-ubuntu-2404":
+		"blacksmith-2vcpu-ubuntu-2404", "blacksmith-4vcpu-ubuntu-2404", "blacksmith-8vcpu-ubuntu-2404",
+		"blacksmith-16vcpu-ubuntu-2404", "blacksmith-32vcpu-ubuntu-2404":
 		return "catthehacker/ubuntu:act-24.04", true
 	default:
 		return "", false

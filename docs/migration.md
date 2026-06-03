@@ -38,6 +38,12 @@ available.
 bellows init
 ```
 
+Preview the generated config without writing files:
+
+```sh
+bellows init --dry-run
+```
+
 Expected effects:
 
 - discover `.github/workflows/*.yml`;
@@ -68,10 +74,29 @@ The command reports:
 - missing secrets;
 - missing local dependencies.
 
+Apply safe config fixes:
+
+```sh
+bellows doctor --fix
+```
+
+Use JSON output for agents or migration scripts:
+
+```sh
+bellows doctor --format json
+bellows explain --format json
+```
+
 ## Step 4: Run Locally
 
 ```sh
 bellows run
+```
+
+List the resolved local plan before invoking Docker:
+
+```sh
+bellows run --list
 ```
 
 Specific workflow:

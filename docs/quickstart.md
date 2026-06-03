@@ -10,6 +10,11 @@ bellows init
 ```
 
 This creates `.bellows.yml` with detected default workflows and runner mappings.
+Preview the generated config first with:
+
+```sh
+bellows init --dry-run
+```
 
 To also create a `pre-push` hook entry:
 
@@ -31,12 +36,30 @@ Doctor reports:
 - missing `act` or Docker dependencies;
 - known local compatibility warnings.
 
+Use strict mode when warnings should block the local check:
+
+```sh
+bellows doctor --strict
+```
+
+Use safe fixes to add known runner mappings and local skip recommendations:
+
+```sh
+bellows doctor --fix
+```
+
 ## 3. Run a Workflow
 
 Run the default workflow:
 
 ```sh
 bellows run
+```
+
+Preview the execution plan without Docker:
+
+```sh
+bellows run --list
 ```
 
 Run a specific workflow:
@@ -64,4 +87,3 @@ Then Bellows runs before pushes:
 ```sh
 git push
 ```
-

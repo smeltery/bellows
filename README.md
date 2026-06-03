@@ -99,13 +99,18 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 | Command | Description |
 |---|---|
 | `bellows init` | Create `.bellows.yml` for the current repository. |
+| `bellows init --dry-run` | Preview generated config without writing files. |
 | `bellows init --pre-commit` | Create `.bellows.yml` and add a local pre-commit hook that runs at `pre-push`. |
 | `bellows run` | Run configured workflows through act. |
+| `bellows run --list` | Show the resolved local execution plan without Docker. |
 | `bellows run --workflow ci.yml` | Run one workflow from `.github/workflows`. |
 | `bellows run --workflow .github/workflows/ci.yml --job test` | Run one workflow job. |
 | `bellows run --precommit` | Run the pre-push hook path and print rerun commands on failure. |
 | `bellows doctor` | Check Docker, act, workflow compatibility, secrets, and runner mappings. |
 | `bellows doctor --format json` | Emit stable diagnostics for automation and agents. |
+| `bellows doctor --strict` | Fail when warnings are present. |
+| `bellows doctor --fix` | Apply safe `.bellows.yml` fixes. |
+| `bellows explain --format json` | Emit the resolved local execution plan as JSON. |
 | `bellows cache prune` | Prune Docker builder cache used during local workflow runs. |
 
 ## Documentation
@@ -146,9 +151,13 @@ runner:
     blacksmith-2vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
     blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
     blacksmith-8vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
+    blacksmith-16vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
+    blacksmith-32vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
     blacksmith-2vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
     blacksmith-4vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
     blacksmith-8vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
+    blacksmith-16vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
+    blacksmith-32vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
 ```
 
 Run `bellows doctor` to see which labels are mapped locally. See [docs/blacksmith.md](docs/blacksmith.md).

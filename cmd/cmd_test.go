@@ -100,6 +100,26 @@ func TestInitRefusesExistingConfig(t *testing.T) {
 	}
 }
 
+func TestInitDryRunPrintsConfigWithoutWriting(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflow(t, repo, "ci.yml", "blacksmith-16vcpu-ubuntu-2404")
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "init", "--dry-run"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "blacksmith-16vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04") {
+		t.Fatalf("dry-run output missing Blacksmith mapping:\n%s", buf.String())
+	}
+	if _, err := os.Stat(filepath.Join(repo, ".bellows.yml")); !os.IsNotExist(err) {
+		t.Fatalf("dry-run wrote .bellows.yml, stat err=%v", err)
+	}
+}
+
 func TestDoctorCommandReportsBlacksmithMapping(t *testing.T) {
 	repo := t.TempDir()
 	writeWorkflow(t, repo, "ci.yml", "blacksmith-4vcpu-ubuntu-2204")
@@ -114,6 +134,61 @@ func TestDoctorCommandReportsBlacksmithMapping(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "Blacksmith runner blacksmith-4vcpu-ubuntu-2204 maps to catthehacker/ubuntu:act-22.04") {
 		t.Errorf("doctor output missing Blacksmith mapping:\n%s", buf.String())
+	}
+}
+
+func TestDoctorStrictFailsOnWarnings(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/upload-artifact@v5
+`)
+
+	root := newRootCmd("test")
+	root.SetOut(&bytes.Buffer{})
+	root.SetArgs([]string{"--repo", repo, "doctor", "--strict"})
+
+	if err := root.Execute(); err == nil || !strings.Contains(err.Error(), "warnings") {
+		t.Fatalf("expected strict warning failure, got %v", err)
+	}
+}
+
+func TestDoctorFixPersistsSafeConfigChanges(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  test:
+    runs-on: blacksmith-16vcpu-ubuntu-2404
+    steps:
+      - run: go test ./...
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./publish.sh
+`)
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte("version: 1\nrunner:\n  map: {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "doctor", "--fix"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	configYAML := readFile(t, filepath.Join(repo, ".bellows.yml"))
+	for _, want := range []string{
+		"blacksmith-16vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04",
+		"- publish",
+	} {
+		if !strings.Contains(configYAML, want) {
+			t.Fatalf("fixed config missing %q:\n%s", want, configYAML)
+		}
 	}
 }
 
@@ -143,6 +218,102 @@ func TestDoctorCommandSupportsJSON(t *testing.T) {
 		}
 	}
 	t.Fatalf("missing Blacksmith JSON finding: %#v", findings)
+}
+
+func TestRunListPrintsExecutionPlan(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: go test ./...
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy.sh
+`)
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte("version: 1\ndefault_workflows:\n  - ci.yml\nskip:\n  jobs:\n    - deploy\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "run", "--list"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "[run] test") || !strings.Contains(out, "[skip] deploy") {
+		t.Fatalf("run list output missing jobs:\n%s", out)
+	}
+}
+
+func TestExplainSupportsJSON(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflow(t, repo, "ci.yml", "ubuntu-latest")
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte("version: 1\ndefault_workflows:\n  - ci.yml\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "explain", "--format", "json"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	var plan struct {
+		Event     string `json:"event"`
+		Workflows []struct {
+			Path string `json:"path"`
+			Jobs []struct {
+				ID string `json:"id"`
+			} `json:"jobs"`
+		} `json:"workflows"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &plan); err != nil {
+		t.Fatalf("invalid explain JSON: %v\n%s", err, buf.String())
+	}
+	if plan.Event != "pull_request" || len(plan.Workflows) != 1 || plan.Workflows[0].Jobs[0].ID != "test" {
+		t.Fatalf("unexpected explain plan: %#v", plan)
+	}
+}
+
+func TestSampleRepoFixtureExplainsMigrationPlan(t *testing.T) {
+	repo := filepath.Join("testdata", "sample-repo")
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "explain", "--format", "json"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	var plan executionPlan
+	if err := json.Unmarshal(buf.Bytes(), &plan); err != nil {
+		t.Fatalf("invalid fixture plan JSON: %v\n%s", err, buf.String())
+	}
+	if len(plan.Workflows) != 1 {
+		t.Fatalf("workflow count = %d, want 1", len(plan.Workflows))
+	}
+	var sawBlacksmith bool
+	var sawSkippedPublish bool
+	for _, job := range plan.Workflows[0].Jobs {
+		if job.ID == "test" && strings.Join(job.RunnerImages, ",") == "ubuntu-latest=catthehacker/ubuntu:act-22.04,blacksmith-4vcpu-ubuntu-2404=catthehacker/ubuntu:act-24.04" {
+			sawBlacksmith = true
+		}
+		if job.ID == "publish" && job.Skipped {
+			sawSkippedPublish = true
+		}
+	}
+	if !sawBlacksmith || !sawSkippedPublish {
+		t.Fatalf("fixture plan missing expected migration details: %#v", plan)
+	}
 }
 
 func writeWorkflow(t *testing.T, repo, name, runner string) {
