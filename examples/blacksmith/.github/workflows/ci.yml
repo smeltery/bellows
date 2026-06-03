@@ -1,0 +1,14 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, blacksmith-4vcpu-ubuntu-2404]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - run: go test ./...

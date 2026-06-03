@@ -76,11 +76,16 @@ Show the configured event, default workflows, and discovered jobs.
 ```sh
 bellows explain
 bellows explain --format json
+bellows explain changed-files
+bellows explain changed-files --format json
 ```
 
 Use this before `bellows run` when you want to confirm what Bellows sees.
 JSON output includes the resolved execution plan, skipped jobs, runner labels,
 and local runner images.
+
+`explain changed-files` shows the Git files Bellows sees plus the workflows and
+jobs selected by `precommit.paths`.
 
 ## `bellows run`
 
@@ -146,6 +151,47 @@ bellows policy --format github
 Policy checks include cloud-like jobs not listed in `skip.jobs`, unguarded
 artifact uploads, local OIDC gaps, deployment environments, and unmapped
 runners.
+
+## `bellows compat`
+
+Report whether workflow features are supported locally, partially supported, or
+unsupported.
+
+```sh
+bellows compat
+bellows compat --format json
+```
+
+Use this during migration to find jobs that should stay in cloud CI, such as
+release publishing, deployment environments, OIDC credentials, and registry
+publishing.
+
+## `bellows hooks`
+
+Install or remove the generated Bellows pre-commit integration.
+
+```sh
+bellows hooks install
+bellows hooks install --stage pre-commit
+bellows hooks install --force
+bellows hooks uninstall
+```
+
+`hooks uninstall` only removes a generated Bellows-only
+`.pre-commit-config.yaml`. If the file contains other hooks, edit it manually.
+
+## `bellows migrate github-actions`
+
+Inspect existing `.github/workflows` files and print a recommended Bellows
+migration plan.
+
+```sh
+bellows migrate github-actions
+bellows migrate github-actions --format json
+```
+
+The report includes detected workflows, runner labels, local runner mappings,
+cloud-like jobs to skip, a recommended `.bellows.yml`, and next commands.
 
 ## `bellows completion`
 

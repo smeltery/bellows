@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: go test ./...
+
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment:
+      name: production
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+      - run: ./deploy.sh

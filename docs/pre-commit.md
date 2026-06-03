@@ -12,6 +12,13 @@ bellows init --pre-commit
 pre-commit install --hook-type pre-push
 ```
 
+Or install the Bellows hook later:
+
+```sh
+bellows hooks install --stage pre-push
+pre-commit install --hook-type pre-push
+```
+
 ## Generated Hook
 
 Generated config:
@@ -46,6 +53,10 @@ stages: [pre-push]
 
 Users may opt into `pre-commit`, but Bellows does not generate that by
 default.
+
+```sh
+bellows hooks install --stage pre-commit
+```
 
 ## Command Behavior
 
@@ -97,3 +108,9 @@ precommit:
 
 When no changed file matches a rule, `bellows run --precommit` exits without
 running Docker.
+
+Debug rule selection without running Docker:
+
+```sh
+bellows explain changed-files
+```

@@ -32,7 +32,7 @@ func TestNewRootCmdRegistersMVPCommands(t *testing.T) {
 	for _, c := range root.Commands() {
 		cmds[c.Name()] = true
 	}
-	for _, want := range []string{"init", "run", "doctor", "cache", "config", "policy", "explain"} {
+	for _, want := range []string{"init", "run", "doctor", "cache", "config", "policy", "compat", "hooks", "migrate", "explain"} {
 		if !cmds[want] {
 			t.Errorf("missing subcommand %q", want)
 		}
@@ -172,7 +172,7 @@ jobs:
     steps:
       - run: ./publish.sh
 `)
-	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte("version: 1\nrunner:\n  map: {}\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte("# keep me\nversion: 1\nrunner:\n  map: {}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -186,12 +186,39 @@ jobs:
 	}
 	configYAML := readFile(t, filepath.Join(repo, ".bellows.yml"))
 	for _, want := range []string{
+		"# keep me",
 		"blacksmith-16vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04",
 		"- publish",
 	} {
 		if !strings.Contains(configYAML, want) {
 			t.Fatalf("fixed config missing %q:\n%s", want, configYAML)
 		}
+	}
+}
+
+func TestHooksInstallAndUninstall(t *testing.T) {
+	repo := t.TempDir()
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "hooks", "install", "--stage", "pre-commit"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	hook := readFile(t, filepath.Join(repo, ".pre-commit-config.yaml"))
+	if !strings.Contains(hook, "stages: [pre-commit]") {
+		t.Fatalf("hook stage mismatch:\n%s", hook)
+	}
+
+	root = newRootCmd("test")
+	buf.Reset()
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "hooks", "uninstall"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(repo, ".pre-commit-config.yaml")); !os.IsNotExist(err) {
+		t.Fatalf("hook was not removed, stat err=%v", err)
 	}
 }
 
@@ -408,6 +435,36 @@ func TestExplainSupportsJSON(t *testing.T) {
 	}
 }
 
+func TestExplainChangedFiles(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflow(t, repo, "ci.yml", "ubuntu-latest")
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte(`version: 1
+default_workflows:
+  - ci.yml
+precommit:
+  mode: changed-files
+  paths:
+    - pattern: "*.go"
+      jobs: [test]
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, repo, "init")
+	if err := os.WriteFile(filepath.Join(repo, "main.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "explain", "changed-files"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "main.go") || !strings.Contains(buf.String(), "jobs: test") {
+		t.Fatalf("changed file explanation mismatch:\n%s", buf.String())
+	}
+}
+
 func TestConfigCommands(t *testing.T) {
 	repo := t.TempDir()
 	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte("version: 1\n"), 0o644); err != nil {
@@ -456,6 +513,56 @@ jobs:
 	}
 	if !strings.Contains(buf.String(), "::error file=.github/workflows/ci.yml,title=cloud_job_not_skipped::") {
 		t.Fatalf("missing policy annotation:\n%s", buf.String())
+	}
+}
+
+func TestCompatCommandReportsUnsupportedFeatures(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "release.yml", `name: Release
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: goreleaser/goreleaser-action@v6
+`)
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "compat"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "unsupported") || !strings.Contains(buf.String(), "release-publish") {
+		t.Fatalf("compat output mismatch:\n%s", buf.String())
+	}
+}
+
+func TestMigrateGitHubActionsPrintsRecommendedConfig(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  test:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - run: go test ./...
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy.sh
+`)
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "migrate", "github-actions"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"migration plan", "blacksmith-4vcpu-ubuntu-2404", "- deploy", "bellows hooks install --stage pre-push"} {
+		if !strings.Contains(buf.String(), want) {
+			t.Fatalf("migration output missing %q:\n%s", want, buf.String())
+		}
 	}
 }
 

@@ -67,3 +67,19 @@ jobs:
 
       - name: Build
         run: go build -o bellows .
+
+  bellows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Dogfood Bellows
+        run: |
+          go run . config validate
+          go run . policy
+          go run . compat
+          go run . run --list --estimate

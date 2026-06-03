@@ -84,6 +84,21 @@ func TestWriteForceOverwritesExistingConfig(t *testing.T) {
 	}
 }
 
+func TestRemoveRefusesMixedHookConfig(t *testing.T) {
+	repo := t.TempDir()
+	path := filepath.Join(repo, ".pre-commit-config.yaml")
+	mixed := Hook("pre-push") + "      - id: other\n        name: Other\n        entry: other\n        language: system\n"
+	if err := os.WriteFile(path, []byte(mixed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, removed, err := Remove(repo); err != nil || removed {
+		t.Fatalf("Remove removed mixed config: removed=%v err=%v", removed, err)
+	}
+	if data := readHook(t, path); data != mixed {
+		t.Fatalf("mixed hook changed:\n%s", data)
+	}
+}
+
 func readHook(t *testing.T, path string) string {
 	t.Helper()
 	data, err := os.ReadFile(path)

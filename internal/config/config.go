@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"gopkg.in/yaml.v3"
 )
@@ -125,12 +126,136 @@ func SaveTo(cfg *Config, path string) error {
 	return nil
 }
 
+func PatchSafeFixes(path string, cfg *Config) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return SaveTo(cfg, path)
+		}
+		return fmt.Errorf("reading config: %w", err)
+	}
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return fmt.Errorf("parsing config %s: %w", path, err)
+	}
+	root := mappingRoot(&doc)
+	if root == nil {
+		return SaveTo(cfg, path)
+	}
+	upsertScalarTagged(root, "version", fmt.Sprintf("%d", cfg.Version), "!!int")
+	if len(cfg.Runner.Map) > 0 {
+		runnerNode := ensureMapping(root, "runner")
+		mapNode := ensureMapping(runnerNode, "map")
+		labels := make([]string, 0, len(cfg.Runner.Map))
+		for label := range cfg.Runner.Map {
+			labels = append(labels, label)
+		}
+		sort.Strings(labels)
+		for _, label := range labels {
+			upsertScalar(mapNode, label, cfg.Runner.Map[label])
+		}
+	}
+	if len(cfg.Skip.Jobs) > 0 {
+		skipNode := ensureMapping(root, "skip")
+		jobsNode := ensureSequence(skipNode, "jobs")
+		seen := map[string]bool{}
+		for _, item := range jobsNode.Content {
+			seen[item.Value] = true
+		}
+		jobs := append([]string(nil), cfg.Skip.Jobs...)
+		sort.Strings(jobs)
+		for _, job := range jobs {
+			if seen[job] {
+				continue
+			}
+			jobsNode.Content = append(jobsNode.Content, scalarNode(job))
+		}
+	}
+	out, err := yaml.Marshal(&doc)
+	if err != nil {
+		return fmt.Errorf("marshaling config: %w", err)
+	}
+	if err := os.WriteFile(path, out, 0o644); err != nil {
+		return fmt.Errorf("writing config: %w", err)
+	}
+	return nil
+}
+
 func Marshal(cfg *Config) ([]byte, error) {
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("marshaling config: %w", err)
 	}
 	return data, nil
+}
+
+func mappingRoot(doc *yaml.Node) *yaml.Node {
+	if doc.Kind == yaml.DocumentNode && len(doc.Content) > 0 {
+		doc = doc.Content[0]
+	}
+	if doc.Kind != yaml.MappingNode {
+		return nil
+	}
+	return doc
+}
+
+func ensureMapping(parent *yaml.Node, key string) *yaml.Node {
+	if value := mappingValue(parent, key); value != nil {
+		if value.Kind != yaml.MappingNode {
+			value.Kind = yaml.MappingNode
+			value.Tag = "!!map"
+			value.Value = ""
+			value.Content = nil
+		}
+		value.Style = 0
+		return value
+	}
+	value := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	parent.Content = append(parent.Content, scalarNode(key), value)
+	return value
+}
+
+func ensureSequence(parent *yaml.Node, key string) *yaml.Node {
+	if value := mappingValue(parent, key); value != nil {
+		if value.Kind != yaml.SequenceNode {
+			value.Kind = yaml.SequenceNode
+			value.Tag = "!!seq"
+			value.Value = ""
+			value.Content = nil
+		}
+		value.Style = 0
+		return value
+	}
+	value := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+	parent.Content = append(parent.Content, scalarNode(key), value)
+	return value
+}
+
+func upsertScalar(parent *yaml.Node, key, value string) {
+	upsertScalarTagged(parent, key, value, "!!str")
+}
+
+func upsertScalarTagged(parent *yaml.Node, key, value, tag string) {
+	if node := mappingValue(parent, key); node != nil {
+		node.Kind = yaml.ScalarNode
+		node.Tag = tag
+		node.Value = value
+		return
+	}
+	parent.Content = append(parent.Content, scalarNode(key), &yaml.Node{Kind: yaml.ScalarNode, Tag: tag, Value: value})
+}
+
+func mappingValue(parent *yaml.Node, key string) *yaml.Node {
+	for i := 0; i+1 < len(parent.Content); i += 2 {
+		if parent.Content[i].Value == key {
+			return parent.Content[i+1]
+		}
+	}
+	return nil
+}
+
+func scalarNode(value string) *yaml.Node {
+	return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: value}
 }
 
 func (c *Config) ApplyDefaults() {

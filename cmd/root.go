@@ -14,8 +14,10 @@ import (
 
 	"github.com/dotbrains/bellows/internal/act"
 	"github.com/dotbrains/bellows/internal/changed"
+	"github.com/dotbrains/bellows/internal/compat"
 	"github.com/dotbrains/bellows/internal/config"
 	"github.com/dotbrains/bellows/internal/doctor"
+	"github.com/dotbrains/bellows/internal/migrate"
 	"github.com/dotbrains/bellows/internal/plan"
 	"github.com/dotbrains/bellows/internal/policy"
 	"github.com/dotbrains/bellows/internal/precommit"
@@ -50,6 +52,9 @@ func newRootCmd(version string) *cobra.Command {
 	root.AddCommand(newCacheCmd())
 	root.AddCommand(newConfigCmd(opts))
 	root.AddCommand(newPolicyCmd(opts))
+	root.AddCommand(newCompatCmd(opts))
+	root.AddCommand(newHooksCmd(opts))
+	root.AddCommand(newMigrateCmd(opts))
 	root.AddCommand(newExplainCmd(opts))
 	root.AddCommand(newCompletionCmd(root))
 
@@ -236,7 +241,7 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 				}
 				cfg = fixedCfg
 				if !fixDryRun && len(fixes) > 0 && fixes[0] != "no safe fixes available" {
-					if err := config.SaveTo(cfg, filepath.Join(root, config.FileName)); err != nil {
+					if err := config.PatchSafeFixes(filepath.Join(root, config.FileName), cfg); err != nil {
 						return err
 					}
 					cfg, err = config.Load(root)
@@ -282,6 +287,141 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 	cmd.Flags().BoolVar(&strict, "strict", false, "fail when warnings are found")
 	cmd.Flags().BoolVar(&fix, "fix", false, "apply safe .bellows.yml fixes before reporting diagnostics")
 	cmd.Flags().BoolVar(&fixDryRun, "fix-dry-run", false, "preview safe .bellows.yml fixes without writing files")
+	return cmd
+}
+
+func newCompatCmd(opts *cliOptions) *cobra.Command {
+	var format string
+	cmd := &cobra.Command{
+		Use:   "compat",
+		Short: "Report local GitHub Actions compatibility",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			cfg, err := config.Load(root)
+			if err != nil {
+				return err
+			}
+			workflows, err := workflow.Discover(root)
+			if err != nil {
+				return err
+			}
+			items := compat.Report(cfg, workflows)
+			switch format {
+			case "json":
+				return json.NewEncoder(cmd.OutOrStdout()).Encode(items)
+			case "text":
+				cmd.Printf("compatibility: %s\n", compat.Summary(items))
+				for _, item := range items {
+					cmd.Printf("[%s] %s", item.Status, item.Feature)
+					if item.Workflow != "" {
+						cmd.Printf(" %s", item.Workflow)
+					}
+					if item.Job != "" {
+						cmd.Printf(" job %s", item.Job)
+					}
+					cmd.Printf(": %s\n", item.Message)
+					if item.Suggestion != "" {
+						cmd.Printf("      suggestion: %s\n", item.Suggestion)
+					}
+				}
+				return nil
+			default:
+				return fmt.Errorf("unsupported format %q", format)
+			}
+		},
+	}
+	cmd.Flags().StringVar(&format, "format", "text", "output format: text or json")
+	return cmd
+}
+
+func newHooksCmd(opts *cliOptions) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "hooks",
+		Short: "Install or remove Bellows pre-commit hooks",
+	}
+	var stage string
+	var force bool
+	install := &cobra.Command{
+		Use:   "install",
+		Short: "Install the Bellows pre-commit hook",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			path, err := precommit.WriteStage(root, stage, force)
+			if err != nil {
+				return err
+			}
+			cmd.Printf("wrote %s\n", rel(root, path))
+			return nil
+		},
+	}
+	install.Flags().StringVar(&stage, "stage", "pre-push", "pre-commit stage")
+	install.Flags().BoolVar(&force, "force", false, "overwrite .pre-commit-config.yaml")
+	cmd.AddCommand(install)
+	cmd.AddCommand(&cobra.Command{
+		Use:   "uninstall",
+		Short: "Remove the generated Bellows pre-commit hook",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			path, removed, err := precommit.Remove(root)
+			if err != nil {
+				return err
+			}
+			if removed {
+				cmd.Printf("removed %s\n", rel(root, path))
+			} else {
+				cmd.Printf("no generated Bellows hook found at %s\n", rel(root, path))
+			}
+			return nil
+		},
+	})
+	return cmd
+}
+
+func newMigrateCmd(opts *cliOptions) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "migrate",
+		Short: "Generate migration guidance for existing CI setups",
+	}
+	var format string
+	gha := &cobra.Command{
+		Use:   "github-actions",
+		Short: "Plan a migration from existing GitHub Actions workflows",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			workflows, err := workflow.Discover(root)
+			if err != nil {
+				return err
+			}
+			report := migrate.GitHubActions(root, workflows)
+			switch format {
+			case "json":
+				return json.NewEncoder(cmd.OutOrStdout()).Encode(report)
+			case "text":
+				text, err := migrate.Text(report)
+				if err != nil {
+					return err
+				}
+				cmd.Print(text)
+				return nil
+			default:
+				return fmt.Errorf("unsupported format %q", format)
+			}
+		},
+	}
+	gha.Flags().StringVar(&format, "format", "text", "output format: text or json")
+	cmd.AddCommand(gha)
 	return cmd
 }
 
@@ -437,6 +577,47 @@ func newExplainCmd(opts *cliOptions) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text or json")
+	var changedFormat string
+	changedCmd := &cobra.Command{
+		Use:   "changed-files",
+		Short: "Explain changed-file precommit selection",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			cfg, err := config.Load(root)
+			if err != nil {
+				return err
+			}
+			files, err := changed.GitFiles(root)
+			if err != nil {
+				return err
+			}
+			selection := changed.Select(files, cfg.Precommit.Paths, cfg.DefaultWorkflows)
+			if changedFormat == "json" {
+				return json.NewEncoder(cmd.OutOrStdout()).Encode(selection)
+			}
+			if changedFormat != "text" {
+				return fmt.Errorf("unsupported format %q", changedFormat)
+			}
+			cmd.Printf("changed files: %d\n", len(selection.Files))
+			for _, file := range selection.Files {
+				cmd.Printf("  %s\n", file)
+			}
+			if len(selection.Workflows) == 0 && len(selection.Jobs) == 0 {
+				cmd.Println("selection: no matching path rules")
+				return nil
+			}
+			cmd.Printf("workflows: %s\n", strings.Join(selection.Workflows, ", "))
+			if len(selection.Jobs) > 0 {
+				cmd.Printf("jobs: %s\n", strings.Join(selection.Jobs, ", "))
+			}
+			return nil
+		},
+	}
+	changedCmd.Flags().StringVar(&changedFormat, "format", "text", "output format: text or json")
+	cmd.AddCommand(changedCmd)
 	return cmd
 }
 

@@ -144,6 +144,40 @@ func TestMinimalConfigGolden(t *testing.T) {
 	}
 }
 
+func TestPatchSafeFixesPreservesComments(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, ".bellows.yml")
+	original := "# team note\nversion: 1\nrunner:\n  map: {}\n"
+	if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := DefaultConfig()
+	cfg.Runner.Map["blacksmith-4vcpu-ubuntu-2404"] = "catthehacker/ubuntu:act-24.04"
+	cfg.Skip.Jobs = []string{"deploy"}
+	if err := PatchSafeFixes(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	out := readConfig(t, path)
+	for _, want := range []string{
+		"# team note",
+		"blacksmith-4vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04",
+		"- deploy",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("patched config missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func readConfig(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
 func TestLoadFrom_InvalidYAML(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "bad.yaml")

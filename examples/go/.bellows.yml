@@ -1,0 +1,12 @@
+version: 1
+default_workflows:
+  - ci.yml
+event: pull_request
+runner:
+  map:
+    ubuntu-latest: catthehacker/ubuntu:act-22.04
+precommit:
+  mode: changed-files
+  paths:
+    - pattern: "*.go"
+      jobs: [test]

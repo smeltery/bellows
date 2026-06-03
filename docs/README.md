@@ -15,6 +15,8 @@ Use these docs when adding Bellows to a repository:
 - [pre-commit.md](pre-commit.md): run Bellows from the `pre-commit` framework.
 - [blacksmith.md](blacksmith.md): use existing Blacksmith runner labels locally.
 - [migration.md](migration.md): migrate an existing GitHub Actions repository.
+- [../examples](../examples): sample Bellows configs for Go, Node, monorepos,
+  deploy skipping, and Blacksmith runners.
 - [local-differences.md](local-differences.md): understand local behavior that
   differs from cloud GitHub Actions.
 - [secrets.md](secrets.md): pass local secrets intentionally.

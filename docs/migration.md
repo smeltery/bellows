@@ -34,6 +34,18 @@ available.
 
 ## Step 2: Initialize
 
+Preview a migration plan from existing workflows:
+
+```sh
+bellows migrate github-actions
+```
+
+Machine-readable output is available for agents and scripts:
+
+```sh
+bellows migrate github-actions --format json
+```
+
 ```sh
 bellows init
 ```
@@ -80,11 +92,15 @@ Apply safe config fixes:
 bellows doctor --fix
 ```
 
+`doctor --fix` patches safe values into `.bellows.yml` while preserving
+hand-authored comments and existing key order where possible.
+
 Use JSON output for agents or migration scripts:
 
 ```sh
 bellows doctor --format json
 bellows explain --format json
+bellows compat --format json
 ```
 
 ## Step 4: Run Locally
@@ -119,6 +135,13 @@ bellows run --precommit
 
 ## Step 5: Enable Pre-Push
 
+Bellows can write the generated hook entry:
+
+```sh
+bellows hooks install --stage pre-push
+pre-commit install --hook-type pre-push
+```
+
 Generated `.pre-commit-config.yaml` entry:
 
 ```yaml
@@ -137,6 +160,12 @@ Install:
 
 ```sh
 pre-commit install --hook-type pre-push
+```
+
+Remove a generated Bellows-only hook file:
+
+```sh
+bellows hooks uninstall
 ```
 
 ## Migration Principles
@@ -193,6 +222,18 @@ Recommended workflow:
 3. GitHub Actions or Blacksmith still runs on pull request.
 
 ## Cache Cleanup
+
+Local runs are fastest when language package caches and Docker layers are
+reused. Prefer existing setup actions where they are already in the workflow,
+but expect local behavior to differ from GitHub-hosted cache services.
+
+Recommended project-level cache choices:
+
+- Go: keep `GOMODCACHE` and `GOCACHE` on the host or mounted by the local
+  runner image.
+- Node: use lockfiles and package-manager caches for npm, pnpm, yarn, or bun.
+- Rust: keep Cargo registry and target directories reusable between local runs.
+- Docker: use BuildKit layer cache and prune it intentionally when it grows.
 
 Prune Docker builder cache used during local workflow runs:
 
