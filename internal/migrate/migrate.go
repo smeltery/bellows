@@ -39,18 +39,18 @@ func Text(report Report) (string, error) {
 	}
 	var b strings.Builder
 	b.WriteString("migration plan\n")
-	b.WriteString(fmt.Sprintf("workflows: %s\n", strings.Join(report.Workflows, ", ")))
+	fmt.Fprintf(&b, "workflows: %s\n", strings.Join(report.Workflows, ", "))
 	if len(report.Runners) > 0 {
-		b.WriteString(fmt.Sprintf("runners: %s\n", strings.Join(report.Runners, ", ")))
+		fmt.Fprintf(&b, "runners: %s\n", strings.Join(report.Runners, ", "))
 	}
 	if len(report.SkippedJobs) > 0 {
-		b.WriteString(fmt.Sprintf("skip locally: %s\n", strings.Join(report.SkippedJobs, ", ")))
+		fmt.Fprintf(&b, "skip locally: %s\n", strings.Join(report.SkippedJobs, ", "))
 	}
 	b.WriteString("\nrecommended .bellows.yml\n")
 	b.Write(data)
 	b.WriteString("\nnext commands\n")
 	for _, command := range report.NextCommands {
-		b.WriteString(fmt.Sprintf("  %s\n", command))
+		fmt.Fprintf(&b, "  %s\n", command)
 	}
 	return b.String(), nil
 }
