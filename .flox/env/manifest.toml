@@ -1,0 +1,9 @@
+schema-version = "1.12.0"
+
+[install]
+docker-client.pkg-path = "docker-client"
+pre-commit.pkg-path = "pre-commit"
+go.pkg-path = "go"
+golangci-lint.pkg-path = "golangci-lint"
+act.pkg-path = "act"
+goreleaser.pkg-path = "goreleaser"

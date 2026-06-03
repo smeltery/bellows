@@ -49,6 +49,31 @@ Check local dependencies with:
 bellows doctor
 ```
 
+## Development Environment
+
+Bellows includes a Flox environment with the project toolchain:
+
+- Go
+- act
+- Docker CLI
+- pre-commit
+- golangci-lint
+- GoReleaser
+
+Activate it before working on the repo:
+
+```sh
+flox activate
+```
+
+Or run commands directly inside the environment:
+
+```sh
+flox activate -- go test ./...
+flox activate -- golangci-lint run
+flox activate -- goreleaser check
+```
+
 ## Configuration
 
 Bellows reads `.bellows.yml` from the repository root.
@@ -126,4 +151,4 @@ emulate macOS.
 
 ## License
 
-Bellows is licensed under the [PolyForm Shield License 1.0.0](https://polyformproject.org/licenses/shield/1.0.0/). The root [LICENSE](LICENSE) must exactly match `dotbrains/lodestone:LICENSE`.
+Bellows is licensed under the [PolyForm Shield License 1.0.0](https://polyformproject.org/licenses/shield/1.0.0/).
