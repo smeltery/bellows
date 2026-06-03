@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -63,7 +64,7 @@ func newInitCmd(opts *cliOptions) *cobra.Command {
 				return err
 			}
 			defaults := defaultWorkflowRefs(workflows)
-			cfg := config.Minimal(defaults, workflow.Labels(workflows))
+			cfg := config.Minimal(defaults, workflow.Labels(workflows), workflow.CloudLikeJobIDs(workflows)...)
 			path := filepath.Join(root, config.FileName)
 			if !force {
 				if _, err := os.Stat(path); err == nil {
@@ -150,7 +151,8 @@ func newRunCmd(opts *cliOptions) *cobra.Command {
 }
 
 func newDoctorCmd(opts *cliOptions) *cobra.Command {
-	return &cobra.Command{
+	var format string
+	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Inspect local GitHub Actions compatibility",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -168,9 +170,21 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 			}
 			findings := doctor.Analyze(cfg, workflows)
 			findings = append(dependencyFindings(), findings...)
+			if format == "json" {
+				if err := json.NewEncoder(cmd.OutOrStdout()).Encode(findings); err != nil {
+					return err
+				}
+			} else if format != "text" {
+				return fmt.Errorf("unsupported format %q", format)
+			}
 			var hasError bool
 			for _, finding := range findings {
-				cmd.Printf("[%s] %s\n", finding.Level, finding.Message)
+				if format == "text" {
+					cmd.Printf("[%s] %s\n", finding.Level, finding.Message)
+					if finding.Suggestion != "" {
+						cmd.Printf("      suggestion: %s\n", finding.Suggestion)
+					}
+				}
 				if finding.Level == "error" {
 					hasError = true
 				}
@@ -181,6 +195,8 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&format, "format", "text", "output format: text or json")
+	return cmd
 }
 
 func newCacheCmd() *cobra.Command {
@@ -249,19 +265,19 @@ func requireDependency(name string) error {
 func dependencyFindings() []doctor.Finding {
 	findings := make([]doctor.Finding, 0, 2)
 	if _, err := exec.LookPath("act"); err != nil {
-		findings = append(findings, doctor.Finding{Level: "warn", Message: "act was not found in PATH; bellows run requires act"})
+		findings = append(findings, doctor.NewFinding("warn", "act_missing", "act was not found in PATH; bellows run requires act"))
 	} else {
-		findings = append(findings, doctor.Finding{Level: "ok", Message: "act is available"})
+		findings = append(findings, doctor.NewFinding("ok", "act_available", "act is available"))
 	}
 	if _, err := exec.LookPath("docker"); err != nil {
-		findings = append(findings, doctor.Finding{Level: "warn", Message: "docker was not found in PATH; bellows run requires Docker"})
+		findings = append(findings, doctor.NewFinding("warn", "docker_missing", "docker was not found in PATH; bellows run requires Docker"))
 		return findings
 	}
 	if err := exec.Command("docker", "info").Run(); err != nil {
-		findings = append(findings, doctor.Finding{Level: "warn", Message: "Docker is installed but not reachable"})
+		findings = append(findings, doctor.NewFinding("warn", "docker_unreachable", "Docker is installed but not reachable"))
 		return findings
 	}
-	findings = append(findings, doctor.Finding{Level: "ok", Message: "Docker is reachable"})
+	findings = append(findings, doctor.NewFinding("ok", "docker_reachable", "Docker is reachable"))
 	return findings
 }
 

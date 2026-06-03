@@ -76,9 +76,34 @@ skip:
 
 Cloud CI should remain responsible for production deployment checks.
 
+## Artifact Uploads Fail Locally
+
+GitHub artifact uploads require cloud runtime credentials that local `act` runs
+usually do not have.
+
+Guard artifact steps so they stay enabled in cloud CI and are skipped locally:
+
+```yaml
+- name: Upload coverage
+  if: ${{ env.ACT != 'true' }}
+  uses: actions/upload-artifact@v5
+```
+
+Bellows passes both `ACT=true` and `BELLOWS=true` to local workflow runs.
+
+## `doctor` JSON For Automation
+
+Use JSON output when another tool needs to inspect diagnostics:
+
+```sh
+bellows doctor --format json
+```
+
+Each finding includes a `level`, stable `code`, message, and optional workflow,
+job, and suggestion fields.
+
 ## Clear Local Docker Cache
 
 ```sh
 bellows cache prune
 ```
-

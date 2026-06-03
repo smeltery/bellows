@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,7 +38,20 @@ func TestNewRootCmdRegistersMVPCommands(t *testing.T) {
 
 func TestInitDiscoversWorkflowsAndWritesConfigs(t *testing.T) {
 	repo := t.TempDir()
-	writeWorkflow(t, repo, "ci.yml", "blacksmith-4vcpu-ubuntu-2204")
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, blacksmith-4vcpu-ubuntu-2204]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - run: go test ./...
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy.sh
+`)
 
 	root := newRootCmd("test")
 	buf := &bytes.Buffer{}
@@ -53,6 +67,8 @@ func TestInitDiscoversWorkflowsAndWritesConfigs(t *testing.T) {
 		"default_workflows:",
 		"- ci.yml",
 		"blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04",
+		"ubuntu-latest: catthehacker/ubuntu:act-22.04",
+		"- deploy",
 	} {
 		if !strings.Contains(configYAML, want) {
 			t.Errorf(".bellows.yml missing %q:\n%s", want, configYAML)
@@ -101,13 +117,46 @@ func TestDoctorCommandReportsBlacksmithMapping(t *testing.T) {
 	}
 }
 
+func TestDoctorCommandSupportsJSON(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflow(t, repo, "ci.yml", "blacksmith-4vcpu-ubuntu-2204")
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "doctor", "--format", "json"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	var findings []struct {
+		Level   string `json:"level"`
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &findings); err != nil {
+		t.Fatalf("invalid doctor JSON: %v\n%s", err, buf.String())
+	}
+	for _, finding := range findings {
+		if finding.Code == "blacksmith_runner_mapped" && strings.Contains(finding.Message, "blacksmith-4vcpu-ubuntu-2204") {
+			return
+		}
+	}
+	t.Fatalf("missing Blacksmith JSON finding: %#v", findings)
+}
+
 func writeWorkflow(t *testing.T, repo, name, runner string) {
+	t.Helper()
+	body := "name: CI\njobs:\n  test:\n    runs-on: " + runner + "\n    steps:\n      - run: go test ./...\n"
+	writeWorkflowBody(t, repo, name, body)
+}
+
+func writeWorkflowBody(t *testing.T, repo, name, body string) {
 	t.Helper()
 	dir := filepath.Join(repo, ".github", "workflows")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	body := "name: CI\njobs:\n  test:\n    runs-on: " + runner + "\n    steps:\n      - run: go test ./...\n"
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}

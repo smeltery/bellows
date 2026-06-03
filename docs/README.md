@@ -14,6 +14,8 @@ Use these docs when adding Bellows to a repository:
 - [pre-commit.md](pre-commit.md): run Bellows from the `pre-commit` framework.
 - [blacksmith.md](blacksmith.md): use existing Blacksmith runner labels locally.
 - [migration.md](migration.md): migrate an existing GitHub Actions repository.
+- [local-differences.md](local-differences.md): understand local behavior that
+  differs from cloud GitHub Actions.
 - [secrets.md](secrets.md): pass local secrets intentionally.
 - [troubleshooting.md](troubleshooting.md): fix common local runner issues.
 - [security.md](security.md): understand the local execution security model.
@@ -34,4 +36,3 @@ The normal flow is:
 
 Cloud CI should remain the final authority for pull requests and protected
 branches.
-

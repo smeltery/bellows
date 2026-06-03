@@ -88,7 +88,7 @@ func TestLoadFrom_PartialConfigKeepsDefaults(t *testing.T) {
 }
 
 func TestMinimalAddsDetectedRunnerMappings(t *testing.T) {
-	cfg := Minimal([]string{"ci.yml"}, []string{"blacksmith-4vcpu-ubuntu-2204", "macos-latest"})
+	cfg := Minimal([]string{"ci.yml"}, []string{"blacksmith-4vcpu-ubuntu-2204", "macos-latest"}, "deploy")
 	if !reflect.DeepEqual(cfg.DefaultWorkflows, []string{"ci.yml"}) {
 		t.Fatalf("DefaultWorkflows = %#v", cfg.DefaultWorkflows)
 	}
@@ -97,6 +97,9 @@ func TestMinimalAddsDetectedRunnerMappings(t *testing.T) {
 	}
 	if got := cfg.Runner.Map["macos-latest"]; got != "catthehacker/ubuntu:act-22.04" {
 		t.Errorf("macos map = %q", got)
+	}
+	if !reflect.DeepEqual(cfg.Skip.Jobs, []string{"deploy"}) {
+		t.Errorf("Skip.Jobs = %#v", cfg.Skip.Jobs)
 	}
 }
 

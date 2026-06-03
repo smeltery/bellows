@@ -30,6 +30,8 @@ func TestArgsBuildsActCommand(t *testing.T) {
 		"pull_request",
 		"--workflows", ".github/workflows/ci.yml",
 		"--job", "test",
+		"--env", "ACT=true",
+		"--env", "BELLOWS=true",
 		"--platform", "blacksmith-4vcpu-ubuntu-2204=catthehacker/ubuntu:act-22.04",
 		"--platform", "macos-14=catthehacker/ubuntu:act-22.04",
 		"--platform", "macos-15=catthehacker/ubuntu:act-22.04",

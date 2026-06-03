@@ -170,7 +170,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func Minimal(workflows []string, runnerLabels []string) *Config {
+func Minimal(workflows []string, runnerLabels []string, skippedJobs ...string) *Config {
 	cfg := DefaultConfig()
 	cfg.DefaultWorkflows = workflows
 	cfg.Runner.Map = map[string]string{}
@@ -182,6 +182,7 @@ func Minimal(workflows []string, runnerLabels []string) *Config {
 	if len(cfg.Runner.Map) == 0 {
 		cfg.Runner.Map["ubuntu-latest"] = "catthehacker/ubuntu:act-22.04"
 	}
+	cfg.Skip.Jobs = append([]string(nil), skippedJobs...)
 	return cfg
 }
 

@@ -25,10 +25,27 @@ Inspect local workflow compatibility.
 
 ```sh
 bellows doctor
+bellows doctor --format json
 ```
 
 Doctor checks workflow discovery, runner mappings, dynamic runner expressions,
 `act`, Docker, and known local compatibility issues.
+
+Text output is intended for humans. JSON output is intended for editor
+integrations, automation, or agents that need stable diagnostic fields:
+
+```json
+[
+  {
+    "level": "warn",
+    "code": "dynamic_runner",
+    "workflow": ".github/workflows/ci.yml",
+    "job": "test",
+    "message": "job test uses dynamic runner expression ${{ matrix.os }}",
+    "suggestion": "ensure every possible matrix runner value is mapped in .bellows.yml"
+  }
+]
+```
 
 ## `bellows explain`
 
@@ -61,6 +78,9 @@ bellows run --precommit
 `--precommit` uses concise hook-oriented output and prints a rerun command on
 failure.
 
+Bellows passes `ACT=true` and `BELLOWS=true` to `act` so workflows can guard
+cloud-only steps during local runs.
+
 ## `bellows cache prune`
 
 Prune Docker builder cache used during local workflow runs.
@@ -68,4 +88,3 @@ Prune Docker builder cache used during local workflow runs.
 ```sh
 bellows cache prune
 ```
-

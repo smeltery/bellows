@@ -105,6 +105,7 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 | `bellows run --workflow .github/workflows/ci.yml --job test` | Run one workflow job. |
 | `bellows run --precommit` | Run the pre-push hook path and print rerun commands on failure. |
 | `bellows doctor` | Check Docker, act, workflow compatibility, secrets, and runner mappings. |
+| `bellows doctor --format json` | Emit stable diagnostics for automation and agents. |
 | `bellows cache prune` | Prune Docker builder cache used during local workflow runs. |
 
 ## Documentation
@@ -113,6 +114,7 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 - [Installation](docs/installation.md)
 - [Commands](docs/commands.md)
 - [Configuration](docs/configuration.md)
+- [Local Differences](docs/local-differences.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Security](docs/security.md)
 

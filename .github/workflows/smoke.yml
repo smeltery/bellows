@@ -1,0 +1,20 @@
+name: Smoke
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  homebrew-install:
+    runs-on: macos-latest
+    steps:
+      - name: Install Bellows from Homebrew
+        run: |
+          brew tap dotbrains/tap
+          brew install --cask dotbrains/tap/bellows
+
+      - name: Check installed binary
+        run: |
+          bellows --version
+          bellows --help

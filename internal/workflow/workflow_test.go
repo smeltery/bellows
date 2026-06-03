@@ -48,6 +48,57 @@ jobs:
 	}
 }
 
+func TestDiscoverExpandsMatrixRunnerLabelsAndCloudJobs(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".github", "workflows")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	data := `name: Release
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      id-token: write
+    environment:
+      name: production
+    steps:
+      - uses: actions/upload-artifact@v4
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy.sh
+`
+	if err := os.WriteFile(filepath.Join(dir, "release.yml"), []byte(data), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	workflows, err := Discover(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	labels := Labels(workflows)
+	if !reflect.DeepEqual(labels, []string{"macos-latest", "ubuntu-latest"}) {
+		t.Fatalf("Labels = %#v", labels)
+	}
+	if !reflect.DeepEqual(CloudLikeJobIDs(workflows), []string{"deploy"}) {
+		t.Fatalf("CloudLikeJobIDs = %#v", CloudLikeJobIDs(workflows))
+	}
+	job := workflows[0].Jobs["test"]
+	if !reflect.DeepEqual(job.Matrix["os"], []string{"ubuntu-latest", "macos-latest"}) {
+		t.Fatalf("Matrix = %#v", job.Matrix)
+	}
+	if got := job.Permissions["id-token"]; got != "write" {
+		t.Fatalf("Permissions id-token = %q", got)
+	}
+	if !reflect.DeepEqual(job.Environment, []string{"production"}) {
+		t.Fatalf("Environment = %#v", job.Environment)
+	}
+}
+
 func TestResolve(t *testing.T) {
 	root := "/repo"
 	tests := map[string]string{

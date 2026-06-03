@@ -90,6 +90,10 @@ docker:
 - `always`: always pull.
 - `never`: never pull.
 
+On Apple Silicon Macs, `act` may suggest `docker.platform: linux/amd64` when an
+image has architecture-specific problems. Treat that as a troubleshooting knob,
+not a universal default; some actions work better with the host architecture.
+
 ### `runner`
 
 Maps GitHub Actions runner labels to local Docker images.
@@ -140,6 +144,10 @@ skip:
 Bellows supports skipped jobs. Step skipping depends on `act` support and may be
 reported as a diagnostic instead.
 
+`bellows init` pre-populates `skip.jobs` for job ids that look cloud-only, such
+as `deploy`, `publish`, or `release`. Review the generated list before
+committing `.bellows.yml`.
+
 ### `precommit`
 
 Controls generated hook behavior.
@@ -177,6 +185,19 @@ Add Blacksmith mappings only when Blacksmith runner labels are detected.
 macOS runner labels may be mapped to Ubuntu-based act images for local
 compatibility. This catches some cross-platform failures locally but does not
 emulate macOS.
+
+Matrix runner values are detected when workflows use simple expressions such as
+`${{ matrix.os }}` with scalar matrix values.
+
+During `bellows run`, Bellows passes these environment variables to `act`:
+
+```yaml
+env:
+  ACT: "true"
+  BELLOWS: "true"
+```
+
+Use either variable to guard cloud-only steps in workflow files.
 
 ## Related Commands
 

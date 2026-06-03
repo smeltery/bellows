@@ -30,6 +30,7 @@ func Args(opts Options) ([]string, error) {
 	if opts.Job != "" {
 		args = append(args, "--job", opts.Job)
 	}
+	args = append(args, "--env", "ACT=true", "--env", "BELLOWS=true")
 	for _, platform := range platforms(opts.Config.Runner.Map) {
 		args = append(args, "--platform", platform)
 	}
