@@ -48,6 +48,10 @@ precommit:
   stage: pre-push
   mode: full
   timeout_seconds: 900
+  paths:
+    - pattern: "*.go"
+      workflows: [ci.yml]
+      jobs: [test]
 ```
 
 ## Fields
@@ -171,7 +175,22 @@ precommit:
 `mode` values:
 
 - `full`: run configured workflows.
-- `changed-files`: reserved for path-aware workflow selection.
+- `changed-files`: choose workflows and jobs from changed Git files using
+  `paths`.
+
+`paths` entries use Go-style glob patterns. Each matching changed file can
+select workflows, jobs, or both:
+
+```yaml
+precommit:
+  mode: changed-files
+  paths:
+    - pattern: "docs/*"
+      workflows: [docs.yml]
+    - pattern: "*.go"
+      workflows: [ci.yml]
+      jobs: [test]
+```
 
 ## Generated Minimal Config
 

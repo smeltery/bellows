@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,10 +13,13 @@ import (
 	"strings"
 
 	"github.com/dotbrains/bellows/internal/act"
+	"github.com/dotbrains/bellows/internal/changed"
 	"github.com/dotbrains/bellows/internal/config"
 	"github.com/dotbrains/bellows/internal/doctor"
 	"github.com/dotbrains/bellows/internal/plan"
+	"github.com/dotbrains/bellows/internal/policy"
 	"github.com/dotbrains/bellows/internal/precommit"
+	"github.com/dotbrains/bellows/internal/schemas"
 	"github.com/dotbrains/bellows/internal/workflow"
 	"github.com/spf13/cobra"
 )
@@ -44,6 +48,8 @@ func newRootCmd(version string) *cobra.Command {
 	root.AddCommand(newRunCmd(opts))
 	root.AddCommand(newDoctorCmd(opts))
 	root.AddCommand(newCacheCmd())
+	root.AddCommand(newConfigCmd(opts))
+	root.AddCommand(newPolicyCmd(opts))
 	root.AddCommand(newExplainCmd(opts))
 	root.AddCommand(newCompletionCmd(root))
 
@@ -110,6 +116,7 @@ func newRunCmd(opts *cliOptions) *cobra.Command {
 	var event string
 	var precommitMode bool
 	var listOnly bool
+	var estimate bool
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run configured GitHub Actions workflows locally",
@@ -123,6 +130,23 @@ func newRunCmd(opts *cliOptions) *cobra.Command {
 				return err
 			}
 			refs := selectedWorkflows(workflowRef, cfg.DefaultWorkflows)
+			if precommitMode && cfg.Precommit.Mode == "changed-files" && workflowRef == "" {
+				files, err := changed.GitFiles(root)
+				if err != nil {
+					return err
+				}
+				selection := changed.Select(files, cfg.Precommit.Paths, cfg.DefaultWorkflows)
+				if len(selection.Workflows) == 0 && len(selection.Jobs) == 0 {
+					cmd.Println("bellows: no changed files matched local workflow rules")
+					return nil
+				}
+				if len(selection.Workflows) > 0 {
+					refs = selection.Workflows
+				}
+				if job == "" && len(selection.Jobs) == 1 {
+					job = selection.Jobs[0]
+				}
+			}
 			if len(refs) == 0 {
 				return fmt.Errorf("no workflow selected; run bellows init or pass --workflow")
 			}
@@ -136,7 +160,7 @@ func newRunCmd(opts *cliOptions) *cobra.Command {
 					EventOverride: event,
 					JobFilter:     job,
 				})
-				printExecutionPlan(cmd, executionPlan)
+				printExecutionPlan(cmd, executionPlan, estimate)
 				return nil
 			}
 			if err := requireDependency("act"); err != nil {
@@ -175,6 +199,7 @@ func newRunCmd(opts *cliOptions) *cobra.Command {
 	cmd.Flags().StringVar(&event, "event", "", "event name to pass to act")
 	cmd.Flags().BoolVar(&precommitMode, "precommit", false, "run with pre-commit friendly output")
 	cmd.Flags().BoolVar(&listOnly, "list", false, "list runnable workflows and jobs without running act")
+	cmd.Flags().BoolVar(&estimate, "estimate", false, "include local and avoided cloud run estimates with --list")
 	return cmd
 }
 
@@ -226,6 +251,8 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 				if err := json.NewEncoder(cmd.OutOrStdout()).Encode(findings); err != nil {
 					return err
 				}
+			} else if format == "github" {
+				printGitHubFindings(cmd.OutOrStdout(), findings)
 			} else if format != "text" {
 				return fmt.Errorf("unsupported format %q", format)
 			}
@@ -251,7 +278,7 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&format, "format", "text", "output format: text or json")
+	cmd.Flags().StringVar(&format, "format", "text", "output format: text, json, or github")
 	cmd.Flags().BoolVar(&strict, "strict", false, "fail when warnings are found")
 	cmd.Flags().BoolVar(&fix, "fix", false, "apply safe .bellows.yml fixes before reporting diagnostics")
 	cmd.Flags().BoolVar(&fixDryRun, "fix-dry-run", false, "preview safe .bellows.yml fixes without writing files")
@@ -273,6 +300,90 @@ func newCacheCmd() *cobra.Command {
 			return runPassthrough("", "docker", "builder", "prune", "--force")
 		},
 	})
+	return cmd
+}
+
+func newConfigCmd(opts *cliOptions) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "config",
+		Short: "Validate and inspect Bellows configuration",
+	}
+	cmd.AddCommand(&cobra.Command{
+		Use:   "validate",
+		Short: "Validate .bellows.yml",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			if _, err := config.Load(root); err != nil {
+				return err
+			}
+			cmd.Println("config ok")
+			return nil
+		},
+	})
+	cmd.AddCommand(&cobra.Command{
+		Use:   "print-schema [bellows|doctor|explain]",
+		Short: "Print a Bellows JSON Schema",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := "bellows"
+			if len(args) > 0 {
+				name = args[0]
+			}
+			return printEmbeddedSchema(cmd.OutOrStdout(), name)
+		},
+	})
+	return cmd
+}
+
+func newPolicyCmd(opts *cliOptions) *cobra.Command {
+	var format string
+	cmd := &cobra.Command{
+		Use:   "policy",
+		Short: "Validate Bellows repository policy",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			cfg, err := config.Load(root)
+			if err != nil {
+				return err
+			}
+			workflows, err := workflow.Discover(root)
+			if err != nil {
+				return err
+			}
+			violations := policy.Check(cfg, workflows)
+			switch format {
+			case "json":
+				if err := json.NewEncoder(cmd.OutOrStdout()).Encode(violations); err != nil {
+					return err
+				}
+			case "github":
+				printGitHubPolicy(cmd.OutOrStdout(), violations)
+			case "text":
+				for _, violation := range violations {
+					cmd.Printf("[%s] %s\n", violation.Level, violation.Message)
+					if violation.Suggestion != "" {
+						cmd.Printf("      suggestion: %s\n", violation.Suggestion)
+					}
+				}
+				if len(violations) == 0 {
+					cmd.Println("policy ok")
+				}
+			default:
+				return fmt.Errorf("unsupported format %q", format)
+			}
+			if len(violations) > 0 {
+				return errors.New("policy violations found")
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&format, "format", "text", "output format: text, json, or github")
 	return cmd
 }
 
@@ -321,7 +432,7 @@ func newExplainCmd(opts *cliOptions) *cobra.Command {
 			if format != "text" {
 				return fmt.Errorf("unsupported format %q", format)
 			}
-			printExecutionPlan(cmd, executionPlan)
+			printExecutionPlan(cmd, executionPlan, false)
 			return nil
 		},
 	}
@@ -467,7 +578,7 @@ func printFinding(cmd *cobra.Command, finding doctor.Finding) {
 	}
 }
 
-func printExecutionPlan(cmd *cobra.Command, executionPlan plan.Plan) {
+func printExecutionPlan(cmd *cobra.Command, executionPlan plan.Plan, estimate bool) {
 	cmd.Printf("event: %s\n", executionPlan.Event)
 	cmd.Printf("default workflows: %s\n", strings.Join(executionPlan.DefaultWorkflows, ", "))
 	for _, wf := range executionPlan.Workflows {
@@ -484,6 +595,62 @@ func printExecutionPlan(cmd *cobra.Command, executionPlan plan.Plan) {
 			cmd.Println()
 		}
 	}
+	if estimate {
+		cmd.Printf("estimate: %d runnable jobs, %d skipped jobs, %d avoided cloud jobs\n",
+			executionPlan.Estimate.RunnableJobs,
+			executionPlan.Estimate.SkippedJobs,
+			executionPlan.Estimate.EstimatedCloudSaves,
+		)
+	}
+}
+
+func printGitHubFindings(w io.Writer, findings []doctor.Finding) {
+	for _, finding := range findings {
+		if finding.Level != "warn" && finding.Level != "error" {
+			continue
+		}
+		level := "warning"
+		if finding.Level == "error" {
+			level = "error"
+		}
+		fmt.Fprintf(w, "::%s file=%s,title=%s::%s\n", level, finding.Workflow, finding.Code, escapeAnnotation(finding.Message))
+	}
+}
+
+func printGitHubPolicy(w io.Writer, violations []policy.Violation) {
+	for _, violation := range violations {
+		level := "warning"
+		if violation.Level == "error" {
+			level = "error"
+		}
+		fmt.Fprintf(w, "::%s file=%s,title=%s::%s\n", level, violation.Workflow, violation.Code, escapeAnnotation(violation.Message))
+	}
+}
+
+func escapeAnnotation(value string) string {
+	value = strings.ReplaceAll(value, "%", "%25")
+	value = strings.ReplaceAll(value, "\r", "%0D")
+	value = strings.ReplaceAll(value, "\n", "%0A")
+	return value
+}
+
+func printEmbeddedSchema(w io.Writer, name string) error {
+	var data []byte
+	switch name {
+	case "bellows", "bellows.schema.json":
+		data = schemas.Bellows
+	case "doctor", "doctor.schema.json":
+		data = schemas.Doctor
+	case "explain", "explain.schema.json":
+		data = schemas.Explain
+	default:
+		return fmt.Errorf("unknown schema %q", name)
+	}
+	_, err := w.Write(data)
+	if err == nil && len(data) > 0 && data[len(data)-1] != '\n' {
+		_, err = io.WriteString(w, "\n")
+	}
+	return err
 }
 
 func requireDocker() error {

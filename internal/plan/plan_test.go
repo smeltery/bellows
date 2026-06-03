@@ -1,6 +1,9 @@
 package plan
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -58,5 +61,34 @@ func TestBuildFiltersJob(t *testing.T) {
 	}
 	if got.Workflows[0].Jobs[0].ID != "test" {
 		t.Fatalf("filtered job = %q", got.Workflows[0].Jobs[0].ID)
+	}
+}
+
+func TestBuildGoldenJSON(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.DefaultWorkflows = []string{"ci.yml"}
+	cfg.Skip.Jobs = []string{"deploy"}
+	workflows := []workflow.Workflow{{
+		Path: ".github/workflows/ci.yml",
+		Jobs: map[string]workflow.Job{
+			"test": {
+				RunsOn: []string{"${{ matrix.os }}"},
+				Matrix: map[string][]string{"os": []string{"ubuntu-latest", "macos-latest"}},
+			},
+			"deploy": {RunsOn: []string{"ubuntu-latest"}},
+		},
+	}}
+
+	got, err := json.MarshalIndent(Build(cfg, workflows, Options{WorkflowRefs: []string{"ci.yml"}}), "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got = append(got, '\n')
+	want, err := os.ReadFile(filepath.Join("testdata", "plan.golden.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(want) {
+		t.Fatalf("plan JSON mismatch\n got:\n%s\nwant:\n%s", string(got), string(want))
 	}
 }

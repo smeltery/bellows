@@ -43,7 +43,18 @@
         },
         "required": ["path", "jobs"]
       }
+    },
+    "estimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runnable_jobs": { "type": "integer", "minimum": 0 },
+        "skipped_jobs": { "type": "integer", "minimum": 0 },
+        "estimated_local_runs": { "type": "integer", "minimum": 0 },
+        "estimated_cloud_saves": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["runnable_jobs", "skipped_jobs", "estimated_local_runs", "estimated_cloud_saves"]
     }
   },
-  "required": ["event", "default_workflows", "workflows"]
+  "required": ["event", "default_workflows", "workflows", "estimate"]
 }

@@ -103,15 +103,19 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 | `bellows init --pre-commit` | Create `.bellows.yml` and add a local pre-commit hook that runs at `pre-push`. |
 | `bellows run` | Run configured workflows through act. |
 | `bellows run --list` | Show the resolved local execution plan without Docker. |
+| `bellows run --list --estimate` | Show runnable, skipped, and avoided cloud job estimates. |
 | `bellows run --workflow ci.yml` | Run one workflow from `.github/workflows`. |
 | `bellows run --workflow .github/workflows/ci.yml --job test` | Run one workflow job. |
 | `bellows run --precommit` | Run the pre-push hook path and print rerun commands on failure. |
 | `bellows doctor` | Check Docker, act, workflow compatibility, secrets, and runner mappings. |
 | `bellows doctor --format json` | Emit stable diagnostics for automation and agents. |
+| `bellows doctor --format github` | Emit GitHub Actions annotations. |
 | `bellows doctor --strict` | Fail when warnings are present. |
 | `bellows doctor --fix` | Apply safe `.bellows.yml` fixes. |
 | `bellows doctor --fix --fix-dry-run` | Preview safe `.bellows.yml` fixes without writing. |
 | `bellows explain --format json` | Emit the resolved local execution plan as JSON. |
+| `bellows config validate` | Validate `.bellows.yml`. |
+| `bellows policy` | Check local execution policy. |
 | `bellows completion zsh` | Generate shell completions. |
 | `bellows cache prune` | Prune Docker builder cache used during local workflow runs. |
 

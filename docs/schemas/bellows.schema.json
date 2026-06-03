@@ -67,7 +67,26 @@
       "properties": {
         "stage": { "type": "string" },
         "mode": { "type": "string", "enum": ["full", "changed-files"] },
-        "timeout_seconds": { "type": "integer", "minimum": 1 }
+        "timeout_seconds": { "type": "integer", "minimum": 1 },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "pattern": { "type": "string", "minLength": 1 },
+              "workflows": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "jobs": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              }
+            },
+            "required": ["pattern"]
+          }
+        }
       }
     }
   },

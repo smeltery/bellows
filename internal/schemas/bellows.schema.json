@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/dotbrains/bellows/main/docs/schemas/bellows.schema.json",
+  "title": "Bellows configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "default_workflows": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "event": {
+      "type": "string",
+      "enum": ["pull_request", "push", "workflow_dispatch"]
+    },
+    "docker": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "platform": { "type": "string" },
+        "pull": { "type": "string", "enum": ["missing", "always", "never"] }
+      }
+    },
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default_image": { "type": "string" },
+        "map": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "type": "string", "enum": ["none", "env"] },
+        "allow": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "skip": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "jobs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "steps_matching": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "precommit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stage": { "type": "string" },
+        "mode": { "type": "string", "enum": ["full", "changed-files"] },
+        "timeout_seconds": { "type": "integer", "minimum": 1 },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "pattern": { "type": "string", "minLength": 1 },
+              "workflows": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "jobs": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              }
+            },
+            "required": ["pattern"]
+          }
+        }
+      }
+    }
+  },
+  "required": ["version"]
+}

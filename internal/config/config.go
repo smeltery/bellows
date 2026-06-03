@@ -45,9 +45,16 @@ type SkipConfig struct {
 }
 
 type PrecommitConfig struct {
-	Stage          string `yaml:"stage,omitempty"`
-	Mode           string `yaml:"mode,omitempty"`
-	TimeoutSeconds int    `yaml:"timeout_seconds,omitempty"`
+	Stage          string     `yaml:"stage,omitempty"`
+	Mode           string     `yaml:"mode,omitempty"`
+	TimeoutSeconds int        `yaml:"timeout_seconds,omitempty"`
+	Paths          []PathRule `yaml:"paths,omitempty"`
+}
+
+type PathRule struct {
+	Pattern   string   `yaml:"pattern,omitempty"`
+	Workflows []string `yaml:"workflows,omitempty"`
+	Jobs      []string `yaml:"jobs,omitempty"`
 }
 
 func DefaultConfig() *Config {
@@ -96,6 +103,9 @@ func LoadFrom(path string) (*Config, error) {
 	}
 	cfg.ApplyDefaults()
 	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	if err := cfg.ValidatePaths(); err != nil {
 		return nil, err
 	}
 	return cfg, nil
@@ -174,6 +184,18 @@ func (c *Config) Validate() error {
 	case "none", "env":
 	default:
 		return fmt.Errorf("unsupported secrets.mode %q", c.Secrets.Mode)
+	}
+	return nil
+}
+
+func (c *Config) ValidatePaths() error {
+	for i, rule := range c.Precommit.Paths {
+		if rule.Pattern == "" {
+			return fmt.Errorf("precommit.paths[%d].pattern is required", i)
+		}
+		if len(rule.Workflows) == 0 && len(rule.Jobs) == 0 {
+			return fmt.Errorf("precommit.paths[%d] must select at least one workflow or job", i)
+		}
 	}
 	return nil
 }

@@ -129,6 +129,21 @@ func TestSaveTo_WritesExpectedConfigYAML(t *testing.T) {
 	}
 }
 
+func TestMinimalConfigGolden(t *testing.T) {
+	cfg := Minimal([]string{"ci.yml"}, []string{"ubuntu-latest", "blacksmith-4vcpu-ubuntu-2404"}, "deploy")
+	data, err := Marshal(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := os.ReadFile(filepath.Join("testdata", "minimal.golden.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != string(want) {
+		t.Fatalf("minimal config mismatch\n got:\n%s\nwant:\n%s", string(data), string(want))
+	}
+}
+
 func TestLoadFrom_InvalidYAML(t *testing.T) {
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "bad.yaml")

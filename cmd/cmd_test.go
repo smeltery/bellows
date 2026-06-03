@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -31,7 +32,7 @@ func TestNewRootCmdRegistersMVPCommands(t *testing.T) {
 	for _, c := range root.Commands() {
 		cmds[c.Name()] = true
 	}
-	for _, want := range []string{"init", "run", "doctor", "cache", "explain"} {
+	for _, want := range []string{"init", "run", "doctor", "cache", "config", "policy", "explain"} {
 		if !cmds[want] {
 			t.Errorf("missing subcommand %q", want)
 		}
@@ -246,6 +247,29 @@ func TestDoctorCommandSupportsJSON(t *testing.T) {
 	t.Fatalf("missing Blacksmith JSON finding: %#v", findings)
 }
 
+func TestDoctorCommandSupportsGitHubAnnotations(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/upload-artifact@v5
+`)
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "doctor", "--format", "github"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "::warning file=.github/workflows/ci.yml,title=upload_artifact::") {
+		t.Fatalf("missing GitHub annotation:\n%s", buf.String())
+	}
+}
+
 func TestRunListPrintsExecutionPlan(t *testing.T) {
 	repo := t.TempDir()
 	writeWorkflowBody(t, repo, "ci.yml", `name: CI
@@ -274,6 +298,81 @@ jobs:
 	out := buf.String()
 	if !strings.Contains(out, "[run] test") || !strings.Contains(out, "[skip] deploy") {
 		t.Fatalf("run list output missing jobs:\n%s", out)
+	}
+}
+
+func TestRunListEstimatePrintsSummary(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: go test ./...
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy.sh
+`)
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte("version: 1\ndefault_workflows:\n  - ci.yml\nskip:\n  jobs:\n    - deploy\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "run", "--list", "--estimate"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "estimate: 1 runnable jobs, 1 skipped jobs, 1 avoided cloud jobs") {
+		t.Fatalf("missing estimate:\n%s", buf.String())
+	}
+}
+
+func TestRunPrecommitChangedFilesListsOnlyMatchedJob(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: go test ./...
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gofmt -w .
+`)
+	configYAML := `version: 1
+default_workflows:
+  - ci.yml
+precommit:
+  mode: changed-files
+  paths:
+    - pattern: "*.go"
+      workflows: [ci.yml]
+      jobs: [test]
+`
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte(configYAML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, repo, "init")
+	if err := os.WriteFile(filepath.Join(repo, "main.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "run", "--precommit", "--list"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "[run] test") || strings.Contains(out, "[run] lint") {
+		t.Fatalf("changed-files plan mismatch:\n%s", out)
 	}
 }
 
@@ -306,6 +405,57 @@ func TestExplainSupportsJSON(t *testing.T) {
 	}
 	if plan.Event != "pull_request" || len(plan.Workflows) != 1 || plan.Workflows[0].Jobs[0].ID != "test" {
 		t.Fatalf("unexpected explain plan: %#v", plan)
+	}
+}
+
+func TestConfigCommands(t *testing.T) {
+	repo := t.TempDir()
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte("version: 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "config", "validate"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "config ok") {
+		t.Fatalf("unexpected validate output: %s", buf.String())
+	}
+
+	root = newRootCmd("test")
+	buf.Reset()
+	root.SetOut(buf)
+	root.SetArgs([]string{"config", "print-schema", "doctor"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "Bellows doctor findings") {
+		t.Fatalf("unexpected schema output: %s", buf.String())
+	}
+}
+
+func TestPolicyCommandReportsViolations(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy.sh
+`)
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "policy", "--format", "github"})
+
+	if err := root.Execute(); err == nil || !strings.Contains(err.Error(), "policy violations") {
+		t.Fatalf("expected policy failure, got %v", err)
+	}
+	if !strings.Contains(buf.String(), "::error file=.github/workflows/ci.yml,title=cloud_job_not_skipped::") {
+		t.Fatalf("missing policy annotation:\n%s", buf.String())
 	}
 }
 
@@ -380,4 +530,13 @@ func readFile(t *testing.T, path string) string {
 		t.Fatal(err)
 	}
 	return string(data)
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %v failed: %v\n%s", args, err, string(out))
+	}
 }

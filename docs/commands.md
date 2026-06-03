@@ -30,6 +30,7 @@ Inspect local workflow compatibility.
 ```sh
 bellows doctor
 bellows doctor --format json
+bellows doctor --format github
 bellows doctor --strict
 bellows doctor --fix
 bellows doctor --fix --fix-dry-run
@@ -53,6 +54,8 @@ integrations, automation, or agents that need stable diagnostic fields:
   }
 ]
 ```
+
+GitHub output emits workflow annotations such as `::warning file=...::...`.
 
 `--strict` fails on warnings as well as errors. Use it in local scripts when
 warnings should block a push.
@@ -89,6 +92,7 @@ bellows run --workflow ci.yml
 bellows run --workflow .github/workflows/ci.yml
 bellows run --workflow ci.yml --job test
 bellows run --list
+bellows run --list --estimate
 ```
 
 Useful flags:
@@ -100,6 +104,9 @@ bellows run --precommit
 
 `--list` prints the workflows and jobs Bellows would run after config and
 `skip.jobs` are applied. It does not require Docker or `act`.
+
+When `precommit.mode` is `changed-files`, `bellows run --precommit` uses
+`precommit.paths` to choose workflows and jobs from changed Git files.
 
 `--precommit` uses concise hook-oriented output and prints a rerun command on
 failure.
@@ -114,6 +121,31 @@ Prune Docker builder cache used during local workflow runs.
 ```sh
 bellows cache prune
 ```
+
+## `bellows config`
+
+Validate config and print embedded schemas.
+
+```sh
+bellows config validate
+bellows config print-schema
+bellows config print-schema doctor
+bellows config print-schema explain
+```
+
+## `bellows policy`
+
+Validate repository policy separately from runtime compatibility.
+
+```sh
+bellows policy
+bellows policy --format json
+bellows policy --format github
+```
+
+Policy checks include cloud-like jobs not listed in `skip.jobs`, unguarded
+artifact uploads, local OIDC gaps, deployment environments, and unmapped
+runners.
 
 ## `bellows completion`
 

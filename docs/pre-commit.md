@@ -53,6 +53,7 @@ default.
 
 - loads `.bellows.yml`;
 - runs configured default workflows through `act`;
+- uses `precommit.mode: changed-files` when configured;
 - preserves the underlying workflow failure exit code;
 - prints a concise summary;
 - prints the exact command to rerun manually when a failure occurs.
@@ -78,14 +79,21 @@ Then run:
 pre-commit run bellows --hook-stage pre-push
 ```
 
-## Performance Expectations
+## Changed Files Mode
 
-Bellows favors predictable behavior over clever skipping in v1.
+Use `changed-files` mode to select workflows or jobs from Git changes before a
+push:
 
-Performance improvements can come later through:
+```yaml
+precommit:
+  mode: changed-files
+  paths:
+    - pattern: "docs/*"
+      workflows: [docs.yml]
+    - pattern: "*.go"
+      workflows: [ci.yml]
+      jobs: [test]
+```
 
-- selective job execution;
-- workflow-to-path mappings;
-- cache reuse;
-- persistent Docker images;
-- dependency cache guidance.
+When no changed file matches a rule, `bellows run --precommit` exits without
+running Docker.

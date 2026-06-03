@@ -17,6 +17,15 @@ homebrew_casks:
     description: "Run GitHub Actions locally before you push"
     license: "PolyForm Shield 1.0.0"
     binaries: [bellows]
+    generate_completions_from_executable:
+      executable: "bin/bellows"
+      args:
+        - completion
+      shell_parameter_format: cobra
+      shells:
+        - bash
+        - zsh
+        - fish
     hooks:
       post:
         install: |

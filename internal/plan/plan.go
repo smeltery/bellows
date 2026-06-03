@@ -14,6 +14,7 @@ type Plan struct {
 	Event            string         `json:"event"`
 	DefaultWorkflows []string       `json:"default_workflows"`
 	Workflows        []WorkflowPlan `json:"workflows"`
+	Estimate         Estimate       `json:"estimate"`
 }
 
 type WorkflowPlan struct {
@@ -26,6 +27,13 @@ type JobPlan struct {
 	RunsOn       []string `json:"runs_on,omitempty"`
 	RunnerImages []string `json:"runner_images,omitempty"`
 	Skipped      bool     `json:"skipped"`
+}
+
+type Estimate struct {
+	RunnableJobs        int `json:"runnable_jobs"`
+	SkippedJobs         int `json:"skipped_jobs"`
+	EstimatedLocalRuns  int `json:"estimated_local_runs"`
+	EstimatedCloudSaves int `json:"estimated_cloud_saves"`
 }
 
 type Options struct {
@@ -64,6 +72,13 @@ func Build(cfg *config.Config, workflows []workflow.Workflow, opts Options) Plan
 						jp.RunnerImages = append(jp.RunnerImages, fmt.Sprintf("%s=%s", resolved, image))
 					}
 				}
+			}
+			if jp.Skipped {
+				out.Estimate.SkippedJobs++
+				out.Estimate.EstimatedCloudSaves++
+			} else {
+				out.Estimate.RunnableJobs++
+				out.Estimate.EstimatedLocalRuns++
 			}
 			wp.Jobs = append(wp.Jobs, jp)
 		}

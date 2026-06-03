@@ -1,0 +1,40 @@
+{
+  "event": "pull_request",
+  "default_workflows": [
+    "ci.yml"
+  ],
+  "workflows": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "jobs": [
+        {
+          "id": "deploy",
+          "runs_on": [
+            "ubuntu-latest"
+          ],
+          "runner_images": [
+            "ubuntu-latest=catthehacker/ubuntu:act-22.04"
+          ],
+          "skipped": true
+        },
+        {
+          "id": "test",
+          "runs_on": [
+            "${{ matrix.os }}"
+          ],
+          "runner_images": [
+            "ubuntu-latest=catthehacker/ubuntu:act-22.04",
+            "macos-latest=catthehacker/ubuntu:act-22.04"
+          ],
+          "skipped": false
+        }
+      ]
+    }
+  ],
+  "estimate": {
+    "runnable_jobs": 1,
+    "skipped_jobs": 1,
+    "estimated_local_runs": 1,
+    "estimated_cloud_saves": 1
+  }
+}
