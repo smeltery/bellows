@@ -1,0 +1,39 @@
+version: 2
+
+builds:
+  - binary: bellows
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+homebrew_casks:
+  - repository:
+      owner: dotbrains
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    name: bellows
+    homepage: https://github.com/dotbrains/bellows
+    description: "Run GitHub Actions locally before you push"
+    license: "PolyForm Shield 1.0.0"
+    binaries: [bellows]
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/bellows"]
+          end
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
