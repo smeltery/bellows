@@ -23,7 +23,7 @@ runner:
 
 ## Default Mappings
 
-MVP recognizes common labels:
+Bellows recognizes common labels:
 
 ```yaml
 runner:
@@ -85,4 +85,5 @@ The migration promise is:
 > Keep your workflow files. Add Bellows config. Run the same jobs locally where
 > local emulation is practical.
 
-Do not promise exact Blacksmith parity.
+Bellows does not provide exact Blacksmith parity. Cloud-only behavior, worker
+resources, and proprietary acceleration remain cloud-runner concerns.

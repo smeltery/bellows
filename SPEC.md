@@ -1,4 +1,4 @@
-# Bellows MVP Spec
+# Bellows Spec
 
 Bellows runs existing GitHub Actions workflows locally through `act` before they reach cloud runners.
 
@@ -77,7 +77,7 @@ Prunes Docker builder cache used during local workflow runs.
 bellows cache prune
 ```
 
-MVP behavior delegates to `docker builder prune --force`. It does not remove
+Current behavior delegates to `docker builder prune --force`. It does not remove
 workflow files, Bellows config, or pre-commit configuration.
 
 ## Configuration

@@ -1,29 +1,37 @@
-# Bellows Documentation
+# Bellows Docs
 
-Bellows runs existing GitHub Actions workflows locally with Docker before they
-reach cloud runners.
+Bellows runs existing GitHub Actions workflows locally through Docker and
+[`act`](https://github.com/nektos/act), usually from a `pre-push` hook.
 
-This directory is the source of truth for agents building the Bellows repo.
-Start with these documents:
+Use these docs when adding Bellows to a repository:
 
-- [product-spec.md](product-spec.md): product goals, MVP scope, and non-goals.
-- [architecture.md](architecture.md): system design and implementation shape.
-- [configuration.md](configuration.md): `.bellows.yml` schema and defaults.
-- [pre-commit.md](pre-commit.md): hook behavior and generated config.
-- [blacksmith.md](blacksmith.md): Blacksmith runner compatibility.
-- [migration.md](migration.md): migration flow for existing repositories.
-- [agent-build-guide.md](agent-build-guide.md): implementation rules for coding agents.
+- [installation.md](installation.md): install Bellows and its local runtime
+  dependencies.
+- [quickstart.md](quickstart.md): initialize a repo and run the first local
+  workflow.
+- [commands.md](commands.md): command reference for the Bellows CLI.
+- [configuration.md](configuration.md): `.bellows.yml` schema and examples.
+- [pre-commit.md](pre-commit.md): run Bellows from the `pre-commit` framework.
+- [blacksmith.md](blacksmith.md): use existing Blacksmith runner labels locally.
+- [migration.md](migration.md): migrate an existing GitHub Actions repository.
+- [secrets.md](secrets.md): pass local secrets intentionally.
+- [troubleshooting.md](troubleshooting.md): fix common local runner issues.
+- [security.md](security.md): understand the local execution security model.
+- [development.md](development.md): develop Bellows itself with Flox.
 
-## Project Decisions
+## What Bellows Does
 
-- CLI name: `bellows`
-- Config file: `.bellows.yml`
-- Execution backend: `act`
-- Container runtime: Docker-compatible local runtime
-- Default hook stage: `pre-push`
-- User commands: `bellows init`, `bellows run`, `bellows doctor`,
-  `bellows cache prune`
-- Default implementation language: Go, unless `cli-template/LANGUAGES.md` directs
-  otherwise during scaffolding.
-- License: PolyForm Shield License 1.0.0; copy the exact `LICENSE` text from
-  `dotbrains/lodestone`.
+Bellows does not replace cloud CI. It catches common workflow failures locally
+before a push spends GitHub Actions or Blacksmith runner minutes.
+
+The normal flow is:
+
+1. Keep existing `.github/workflows/*.yml` files.
+2. Run `bellows init`.
+3. Review `.bellows.yml`.
+4. Run `bellows doctor`.
+5. Run `bellows run` or use the generated `pre-push` hook.
+
+Cloud CI should remain the final authority for pull requests and protected
+branches.
+

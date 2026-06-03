@@ -47,7 +47,7 @@ precommit:
 
 ### `version`
 
-Required. Must be `1` for MVP.
+Required. Current schema version is `1`.
 
 ### `default_workflows`
 
@@ -68,7 +68,7 @@ Default:
 event: pull_request
 ```
 
-Supported MVP values:
+Supported values:
 
 - `pull_request`
 - `push`
@@ -118,15 +118,10 @@ secrets:
     - GITHUB_TOKEN
 ```
 
-MVP modes:
+Supported modes:
 
 - `none`: pass no secrets.
 - `env`: read allowed names from the local process environment.
-
-Future modes:
-
-- `file`: read from an explicit secrets file.
-- `command`: resolve secrets from an explicit command.
 
 Bellows must not pass every environment variable by default.
 
@@ -142,7 +137,7 @@ skip:
     - Configure AWS credentials
 ```
 
-MVP supports skipped jobs. Step skipping depends on backend support and may be
+Bellows supports skipped jobs. Step skipping depends on `act` support and may be
 reported as a diagnostic instead.
 
 ### `precommit`
@@ -161,7 +156,7 @@ precommit:
 `mode` values:
 
 - `full`: run configured workflows.
-- `changed-files`: future mode that maps changed files to workflows or jobs.
+- `changed-files`: reserved for path-aware workflow selection.
 
 ## Generated Minimal Config
 
