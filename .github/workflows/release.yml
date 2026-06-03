@@ -28,10 +28,13 @@ jobs:
         run: |
           COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
           echo "Total coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 60" | bc -l) )); then
-            echo "Coverage ${COVERAGE}% is below 60% threshold"
-            exit 1
-          fi
+          python3 - "$COVERAGE" <<'PY'
+          import sys
+          coverage = float(sys.argv[1])
+          if coverage < 60:
+              print(f"Coverage {coverage}% is below 60% threshold")
+              sys.exit(1)
+          PY
 
   lint:
     runs-on: ubuntu-latest
