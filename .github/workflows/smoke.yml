@@ -18,6 +18,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: stable
+          cache: false
 
       - name: Install Bellows with Go
         run: GOPROXY=direct go install github.com/dotbrains/bellows@"$TAG"
@@ -57,6 +58,6 @@ jobs:
 
       - name: Check archive binary
         run: |
-          tar -xzf dist/bellows_*_linux_amd64.tar.gz -C dist
+          tar -xzf dist/bellows_linux_amd64.tar.gz -C dist
           dist/bellows --version
           dist/bellows --help
