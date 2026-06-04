@@ -22,6 +22,7 @@ type Config struct {
 	Runner           RunnerConfig    `yaml:"runner,omitempty"`
 	Secrets          SecretsConfig   `yaml:"secrets,omitempty"`
 	Skip             SkipConfig      `yaml:"skip,omitempty"`
+	Policy           PolicyConfig    `yaml:"policy,omitempty"`
 	Precommit        PrecommitConfig `yaml:"precommit,omitempty"`
 }
 
@@ -43,6 +44,10 @@ type SecretsConfig struct {
 type SkipConfig struct {
 	Jobs          []string `yaml:"jobs,omitempty"`
 	StepsMatching []string `yaml:"steps_matching,omitempty"`
+}
+
+type PolicyConfig struct {
+	CloudJobs string `yaml:"cloud_jobs,omitempty"`
 }
 
 type PrecommitConfig struct {
@@ -309,6 +314,11 @@ func (c *Config) Validate() error {
 	case "none", "env":
 	default:
 		return fmt.Errorf("unsupported secrets.mode %q", c.Secrets.Mode)
+	}
+	switch c.Policy.CloudJobs {
+	case "", "error", "warn", "off":
+	default:
+		return fmt.Errorf("unsupported policy.cloud_jobs %q", c.Policy.CloudJobs)
 	}
 	return nil
 }

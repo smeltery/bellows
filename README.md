@@ -28,9 +28,11 @@ flowchart LR
 go install github.com/dotbrains/bellows@latest
 
 cd your-repo
+bellows migrate github-actions
 bellows init
-bellows doctor
-bellows run
+bellows doctor --fix
+bellows hooks install --stage pre-push
+bellows run --list --estimate
 ```
 
 `bellows init` writes a repo-local `.bellows.yml`. Keep committing your normal `.github/workflows/*.yml` files; Bellows maps them to local Docker images for act.
@@ -101,6 +103,7 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 | `bellows init` | Create `.bellows.yml` for the current repository. |
 | `bellows init --dry-run` | Preview generated config without writing files. |
 | `bellows init --pre-commit` | Create `.bellows.yml` and add a local pre-commit hook that runs at `pre-push`. |
+| `bellows migrate github-actions` | Inspect existing workflows and print a recommended migration plan. |
 | `bellows run` | Run configured workflows through act. |
 | `bellows run --list` | Show the resolved local execution plan without Docker. |
 | `bellows run --list --estimate` | Show runnable, skipped, and avoided cloud job estimates. |
@@ -114,6 +117,10 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 | `bellows doctor --fix` | Apply safe `.bellows.yml` fixes. |
 | `bellows doctor --fix --fix-dry-run` | Preview safe `.bellows.yml` fixes without writing. |
 | `bellows explain --format json` | Emit the resolved local execution plan as JSON. |
+| `bellows explain changed-files` | Show how changed Git files select workflows and jobs. |
+| `bellows compat` | Report supported, partial, and unsupported local workflow features. |
+| `bellows hooks install --stage pre-push` | Install the generated Bellows pre-push hook. |
+| `bellows hooks status --format json` | Report hook installation state for automation. |
 | `bellows config validate` | Validate `.bellows.yml`. |
 | `bellows policy` | Check local execution policy. |
 | `bellows completion zsh` | Generate shell completions. |
@@ -125,6 +132,7 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 - [Installation](docs/installation.md)
 - [Commands](docs/commands.md)
 - [Configuration](docs/configuration.md)
+- [Compatibility](docs/compatibility.md)
 - [JSON Schemas](docs/schemas)
 - [Local Differences](docs/local-differences.md)
 - [Troubleshooting](docs/troubleshooting.md)

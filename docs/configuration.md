@@ -54,6 +54,23 @@ precommit:
       jobs: [test]
 ```
 
+## Policy
+
+Policy settings control how `bellows policy` treats repository-level local
+execution rules.
+
+```yaml
+policy:
+  cloud_jobs: error
+```
+
+`policy.cloud_jobs` values:
+
+- `error`: fail when cloud-like jobs such as `deploy`, `publish`, or `release`
+  are not listed in `skip.jobs`.
+- `warn`: report the same issue as a warning.
+- `off`: disable this rule.
+
 ## Fields
 
 ### `version`

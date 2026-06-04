@@ -11,6 +11,8 @@ Use these docs when adding Bellows to a repository:
   workflow.
 - [commands.md](commands.md): command reference for the Bellows CLI.
 - [configuration.md](configuration.md): `.bellows.yml` schema and examples.
+- [compatibility.md](compatibility.md): supported, partial, and unsupported
+  local workflow behavior.
 - [schemas/](schemas/): JSON Schemas for config and machine-readable output.
 - [pre-commit.md](pre-commit.md): run Bellows from the `pre-commit` framework.
 - [blacksmith.md](blacksmith.md): use existing Blacksmith runner labels locally.

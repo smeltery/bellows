@@ -23,3 +23,21 @@ func TestJSONSchemasAreValidJSON(t *testing.T) {
 		}
 	}
 }
+
+func TestEmbeddedSchemasMatchDocs(t *testing.T) {
+	docsRoot := filepath.Join("..", "..", "docs", "schemas")
+	internalRoot := filepath.Join("..", "schemas")
+	for _, name := range []string{"bellows.schema.json", "doctor.schema.json", "explain.schema.json"} {
+		docs, err := os.ReadFile(filepath.Join(docsRoot, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		embedded, err := os.ReadFile(filepath.Join(internalRoot, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(docs) != string(embedded) {
+			t.Fatalf("%s differs between docs and internal schemas", name)
+		}
+	}
+}

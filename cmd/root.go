@@ -383,6 +383,39 @@ func newHooksCmd(opts *cliOptions) *cobra.Command {
 			return nil
 		},
 	})
+	var statusFormat string
+	statusCmd := &cobra.Command{
+		Use:   "status",
+		Short: "Inspect Bellows pre-commit hook status",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			status, err := precommit.Inspect(root)
+			if err != nil {
+				return err
+			}
+			status.Path = rel(root, status.Path)
+			switch statusFormat {
+			case "json":
+				return json.NewEncoder(cmd.OutOrStdout()).Encode(status)
+			case "text":
+				cmd.Printf("path: %s\n", status.Path)
+				cmd.Printf("exists: %t\n", status.Exists)
+				cmd.Printf("installed: %t\n", status.Installed)
+				cmd.Printf("bellows_only: %t\n", status.BellowsOnly)
+				if status.Stage != "" {
+					cmd.Printf("stage: %s\n", status.Stage)
+				}
+				return nil
+			default:
+				return fmt.Errorf("unsupported format %q", statusFormat)
+			}
+		},
+	}
+	statusCmd.Flags().StringVar(&statusFormat, "format", "text", "output format: text or json")
+	cmd.AddCommand(statusCmd)
 	return cmd
 }
 

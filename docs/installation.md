@@ -4,6 +4,8 @@ Bellows is distributed as a single binary.
 
 ## Homebrew
 
+Homebrew distribution is available from the Dotbrains tap.
+
 ```sh
 brew tap dotbrains/tap
 brew install --cask dotbrains/tap/bellows
@@ -22,6 +24,14 @@ go install github.com/dotbrains/bellows@latest
 ```
 
 Make sure `$(go env GOPATH)/bin` is on your `PATH`.
+
+## Release Archives
+
+Download archives from GitHub Releases when a tagged release is available:
+
+```sh
+gh release download --repo dotbrains/bellows --pattern "bellows_*_$(go env GOOS)_$(go env GOARCH).tar.gz"
+```
 
 ## Runtime Dependencies
 

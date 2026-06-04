@@ -23,21 +23,30 @@ func Check(cfg *config.Config, workflows []workflow.Workflow) []Violation {
 	for _, job := range cfg.Skip.Jobs {
 		skipped[job] = true
 	}
-	for _, wf := range workflows {
-		for _, job := range workflow.CloudLikeJobIDs([]workflow.Workflow{wf}) {
-			if !skipped[job] {
-				out = append(out, Violation{
-					Level:      "error",
-					Code:       "cloud_job_not_skipped",
-					Workflow:   wf.Path,
-					Job:        job,
-					Message:    fmt.Sprintf("cloud-like job %s is not skipped locally", job),
-					Suggestion: "add this job to skip.jobs",
-				})
+	cloudJobLevel := cfg.Policy.CloudJobs
+	if cloudJobLevel == "" {
+		cloudJobLevel = "error"
+	}
+	if cloudJobLevel != "off" {
+		for _, wf := range workflows {
+			for _, job := range workflow.CloudLikeJobIDs([]workflow.Workflow{wf}) {
+				if !skipped[job] {
+					out = append(out, Violation{
+						Level:      cloudJobLevel,
+						Code:       "cloud_job_not_skipped",
+						Workflow:   wf.Path,
+						Job:        job,
+						Message:    fmt.Sprintf("cloud-like job %s is not skipped locally", job),
+						Suggestion: "add this job to skip.jobs",
+					})
+				}
 			}
 		}
 	}
 	for _, finding := range doctor.Analyze(cfg, workflows) {
+		if skipped[finding.Job] {
+			continue
+		}
 		switch finding.Code {
 		case "unmapped_runner", "upload_artifact", "aws_credentials", "oidc_permission", "deployment_environment":
 			out = append(out, Violation{

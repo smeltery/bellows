@@ -174,11 +174,16 @@ Install or remove the generated Bellows pre-commit integration.
 bellows hooks install
 bellows hooks install --stage pre-commit
 bellows hooks install --force
+bellows hooks status
+bellows hooks status --format json
 bellows hooks uninstall
 ```
 
 `hooks uninstall` only removes a generated Bellows-only
 `.pre-commit-config.yaml`. If the file contains other hooks, edit it manually.
+
+`hooks status --format json` reports whether the file exists, whether Bellows is
+installed, whether the file is Bellows-only, and the configured stage.
 
 ## `bellows migrate github-actions`
 

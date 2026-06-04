@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/dotbrains/bellows/internal/plan"
+	"github.com/dotbrains/bellows/internal/precommit"
 )
 
 func TestExecuteVersion(t *testing.T) {
@@ -219,6 +220,31 @@ func TestHooksInstallAndUninstall(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(repo, ".pre-commit-config.yaml")); !os.IsNotExist(err) {
 		t.Fatalf("hook was not removed, stat err=%v", err)
+	}
+}
+
+func TestHooksStatusJSON(t *testing.T) {
+	repo := t.TempDir()
+	if _, err := precommit.WriteStage(repo, "pre-push", false); err != nil {
+		t.Fatal(err)
+	}
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "hooks", "status", "--format", "json"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	var status struct {
+		Installed   bool   `json:"installed"`
+		BellowsOnly bool   `json:"bellows_only"`
+		Stage       string `json:"stage"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &status); err != nil {
+		t.Fatalf("invalid status JSON: %v\n%s", err, buf.String())
+	}
+	if !status.Installed || !status.BellowsOnly || status.Stage != "pre-push" {
+		t.Fatalf("unexpected status: %#v", status)
 	}
 }
 
@@ -596,6 +622,34 @@ func TestSampleRepoFixtureExplainsMigrationPlan(t *testing.T) {
 	}
 	if !sawBlacksmith || !sawSkippedPublish {
 		t.Fatalf("fixture plan missing expected migration details: %#v", executionPlan)
+	}
+}
+
+func TestExamplesSmoke(t *testing.T) {
+	root := filepath.Join("..", "examples")
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		repo := filepath.Join(root, entry.Name())
+		t.Run(entry.Name(), func(t *testing.T) {
+			for _, args := range [][]string{
+				{"config", "validate"},
+				{"policy"},
+				{"run", "--list"},
+			} {
+				cmd := newRootCmd("test")
+				cmd.SetOut(&bytes.Buffer{})
+				cmd.SetArgs(append([]string{"--repo", repo}, args...))
+				if err := cmd.Execute(); err != nil {
+					t.Fatalf("bellows %s failed: %v", strings.Join(args, " "), err)
+				}
+			}
+		})
 	}
 }
 

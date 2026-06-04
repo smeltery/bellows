@@ -4,8 +4,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
+
+type Status struct {
+	Path        string `json:"path"`
+	Exists      bool   `json:"exists"`
+	Installed   bool   `json:"installed"`
+	BellowsOnly bool   `json:"bellows_only"`
+	Stage       string `json:"stage,omitempty"`
+}
 
 func Hook(stage string) string {
 	if stage == "" {
@@ -66,4 +75,40 @@ func Remove(repoRoot string) (string, bool, error) {
 		return "", false, err
 	}
 	return path, true, nil
+}
+
+func Inspect(repoRoot string) (Status, error) {
+	path := filepath.Join(repoRoot, ".pre-commit-config.yaml")
+	status := Status{Path: path}
+	existing, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return status, nil
+	}
+	if err != nil {
+		return status, err
+	}
+	text := string(existing)
+	status.Exists = true
+	status.Installed = strings.Contains(text, "id: bellows") && strings.Contains(text, "entry: bellows run --precommit")
+	status.BellowsOnly = status.Installed && strings.Count(text, "- id:") == 1
+	status.Stage = stage(text)
+	return status, nil
+}
+
+func stage(text string) string {
+	const prefix = "stages: ["
+	start := strings.Index(text, prefix)
+	if start < 0 {
+		return ""
+	}
+	start += len(prefix)
+	end := strings.Index(text[start:], "]")
+	if end < 0 {
+		return ""
+	}
+	value := strings.TrimSpace(text[start : start+end])
+	if unquoted, err := strconv.Unquote(value); err == nil {
+		return unquoted
+	}
+	return strings.Trim(value, `"'`)
 }

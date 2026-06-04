@@ -61,6 +61,13 @@
         }
       }
     },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cloud_jobs": { "type": "string", "enum": ["error", "warn", "off"] }
+      }
+    },
     "precommit": {
       "type": "object",
       "additionalProperties": false,
