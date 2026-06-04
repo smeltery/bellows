@@ -34,6 +34,7 @@ bellows doctor --format github
 bellows doctor --strict
 bellows doctor --fix
 bellows doctor --fix --fix-dry-run
+bellows doctor bundle
 ```
 
 Doctor checks workflow discovery, runner mappings, dynamic runner expressions,
@@ -69,6 +70,10 @@ warnings should block a push.
 `--fix --fix-dry-run` prints the same fix plan, shows a unified diff preview,
 and reports diagnostics using the fixed in-memory config, but does not write
 `.bellows.yml`.
+
+`doctor bundle` emits sanitized JSON for support and agent workflows. It includes
+config summaries, workflow/job summaries, doctor findings, compatibility,
+policy, secret references, and hook status. It does not include secret values.
 
 ## `bellows explain`
 

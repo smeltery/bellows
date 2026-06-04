@@ -78,6 +78,16 @@ policy:
 Waivers require a `code` and `reason`. `job` is optional; omit it only when the
 waiver intentionally applies to every job for that code.
 
+Example:
+
+```yaml
+policy:
+  waivers:
+    - code: upload_artifact
+      job: test
+      reason: upload step is guarded inside a shared composite action
+```
+
 ## Fields
 
 ### `version`

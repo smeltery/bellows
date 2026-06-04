@@ -299,7 +299,96 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 	cmd.Flags().BoolVar(&strict, "strict", false, "fail when warnings are found")
 	cmd.Flags().BoolVar(&fix, "fix", false, "apply safe .bellows.yml fixes before reporting diagnostics")
 	cmd.Flags().BoolVar(&fixDryRun, "fix-dry-run", false, "preview safe .bellows.yml fixes without writing files")
+	cmd.AddCommand(newDoctorBundleCmd(opts))
 	return cmd
+}
+
+func newDoctorBundleCmd(opts *cliOptions) *cobra.Command {
+	return &cobra.Command{
+		Use:   "bundle",
+		Short: "Write sanitized diagnostics for support and agents",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			cfg, err := config.Load(root)
+			if err != nil {
+				return err
+			}
+			workflows, err := workflow.Discover(root)
+			if err != nil {
+				return err
+			}
+			hookStatus, err := precommit.Inspect(root)
+			if err != nil {
+				return err
+			}
+			hookStatus.Path = rel(root, hookStatus.Path)
+			bundle := diagnosticBundle{
+				Config: configSummary(cfg),
+				Workflows: workflowSummaries{
+					Count:     len(workflows),
+					Workflows: summarizeWorkflows(workflows),
+				},
+				Doctor:  doctor.Analyze(cfg, workflows),
+				Compat:  compat.Report(cfg, workflows),
+				Policy:  policy.Check(cfg, workflows),
+				Secrets: secrets.Audit(cfg, workflows),
+				Hooks:   hookStatus,
+			}
+			return json.NewEncoder(cmd.OutOrStdout()).Encode(bundle)
+		},
+	}
+}
+
+type diagnosticBundle struct {
+	Config    map[string]any      `json:"config"`
+	Workflows workflowSummaries   `json:"workflows"`
+	Doctor    []doctor.Finding    `json:"doctor"`
+	Compat    []compat.Item       `json:"compat"`
+	Policy    []policy.Violation  `json:"policy"`
+	Secrets   []secrets.Reference `json:"secrets"`
+	Hooks     precommit.Status    `json:"hooks"`
+}
+
+type workflowSummaries struct {
+	Count     int               `json:"count"`
+	Workflows []workflowSummary `json:"workflows"`
+}
+
+type workflowSummary struct {
+	Path string   `json:"path"`
+	Name string   `json:"name,omitempty"`
+	Jobs []string `json:"jobs"`
+}
+
+func configSummary(cfg *config.Config) map[string]any {
+	runnerLabels := make([]string, 0, len(cfg.Runner.Map))
+	for label := range cfg.Runner.Map {
+		runnerLabels = append(runnerLabels, label)
+	}
+	sort.Strings(runnerLabels)
+	return map[string]any{
+		"version":           cfg.Version,
+		"default_workflows": cfg.DefaultWorkflows,
+		"event":             cfg.Event,
+		"runner_labels":     runnerLabels,
+		"secrets_mode":      cfg.Secrets.Mode,
+		"secrets_allow":     cfg.Secrets.Allow,
+		"skip_jobs":         cfg.Skip.Jobs,
+		"policy_cloud_jobs": cfg.Policy.CloudJobs,
+		"precommit_stage":   cfg.Precommit.Stage,
+		"precommit_mode":    cfg.Precommit.Mode,
+	}
+}
+
+func summarizeWorkflows(workflows []workflow.Workflow) []workflowSummary {
+	out := make([]workflowSummary, 0, len(workflows))
+	for _, wf := range workflows {
+		out = append(out, workflowSummary{Path: wf.Path, Name: wf.Name, Jobs: workflow.JobIDs(wf)})
+	}
+	return out
 }
 
 func doctorFixDiff(root string, cfg *config.Config) (string, error) {

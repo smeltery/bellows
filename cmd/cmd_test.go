@@ -40,6 +40,27 @@ func TestNewRootCmdRegistersMVPCommands(t *testing.T) {
 	}
 }
 
+func TestTopLevelCommandsAreDocumented(t *testing.T) {
+	root := newRootCmd("test")
+	commandsDoc := readFile(t, filepath.Join("..", "docs", "commands.md"))
+	readme := readFile(t, filepath.Join("..", "README.md"))
+	for _, command := range root.Commands() {
+		name := command.Name()
+		if command.Hidden {
+			continue
+		}
+		if !strings.Contains(commandsDoc, "bellows "+name) && !strings.Contains(commandsDoc, "`bellows "+name+"`") {
+			t.Fatalf("docs/commands.md missing bellows %s", name)
+		}
+		if name == "completion" {
+			continue
+		}
+		if !strings.Contains(readme, "bellows "+name) && !strings.Contains(readme, "`bellows "+name+"`") {
+			t.Fatalf("README.md missing bellows %s", name)
+		}
+	}
+}
+
 func TestInitDiscoversWorkflowsAndWritesConfigs(t *testing.T) {
 	repo := t.TempDir()
 	writeWorkflowBody(t, repo, "ci.yml", `name: CI
@@ -331,6 +352,47 @@ jobs:
 	}
 	if !strings.Contains(buf.String(), "::warning file=.github/workflows/ci.yml,title=upload_artifact::") {
 		t.Fatalf("missing GitHub annotation:\n%s", buf.String())
+	}
+}
+
+func TestDoctorBundleEmitsSanitizedDiagnostics(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "${{ secrets.NPM_TOKEN }}"
+`)
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte(`version: 1
+secrets:
+  mode: env
+  allow: [NPM_TOKEN]
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "doctor", "bundle"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	var bundle struct {
+		Config  map[string]any `json:"config"`
+		Secrets []struct {
+			Secret  string `json:"secret"`
+			Allowed bool   `json:"allowed"`
+		} `json:"secrets"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &bundle); err != nil {
+		t.Fatalf("invalid bundle JSON: %v\n%s", err, buf.String())
+	}
+	if len(bundle.Secrets) != 1 || bundle.Secrets[0].Secret != "NPM_TOKEN" || !bundle.Secrets[0].Allowed {
+		t.Fatalf("unexpected bundle secrets: %#v", bundle.Secrets)
+	}
+	if strings.Contains(buf.String(), "npm-secret-value") {
+		t.Fatalf("bundle leaked secret value:\n%s", buf.String())
 	}
 }
 
@@ -665,8 +727,35 @@ jobs:
 			t.Fatalf("migration output missing %q:\n%s", want, buf.String())
 		}
 	}
-	if !strings.Contains(buf.String(), "pattern: '*.go'") {
+	if !strings.Contains(buf.String(), "pattern: '**/*.go'") {
 		t.Fatalf("migration output missing path rules:\n%s", buf.String())
+	}
+}
+
+func TestMigrateInfersMonorepoPathRules(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - run: go test ./services/api/...
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm --prefix apps/web test
+`)
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "migrate", "github-actions"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"pattern: services/api/**", "jobs:\n            - api", "pattern: apps/web/**", "jobs:\n            - web"} {
+		if !strings.Contains(buf.String(), want) {
+			t.Fatalf("migration output missing %q:\n%s", want, buf.String())
+		}
 	}
 }
 

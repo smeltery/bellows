@@ -12,13 +12,15 @@ on:
 jobs:
   go-install:
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag || 'latest' }}
     steps:
       - uses: actions/setup-go@v6
         with:
           go-version: stable
 
       - name: Install Bellows with Go
-        run: GOPROXY=direct go install github.com/dotbrains/bellows@latest
+        run: GOPROXY=direct go install github.com/dotbrains/bellows@"$TAG"
 
       - name: Check installed binary
         run: |

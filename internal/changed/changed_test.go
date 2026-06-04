@@ -34,12 +34,24 @@ func TestSelectUsesDefaultsForJobOnlyRules(t *testing.T) {
 func TestSelectSupportsDoubleStarPathRules(t *testing.T) {
 	got := Select([]string{"services/api/internal/server/main.go"}, []config.PathRule{
 		{Pattern: "services/api/**", Jobs: []string{"api"}},
+		{Pattern: "**/*.go", Jobs: []string{"go"}},
+		{Pattern: "services/**/main.go", Jobs: []string{"main"}},
 	}, []string{"ci.yml"})
 
 	if !reflect.DeepEqual(got.Workflows, []string{"ci.yml"}) {
 		t.Fatalf("Workflows = %#v", got.Workflows)
 	}
-	if !reflect.DeepEqual(got.Jobs, []string{"api"}) {
+	if !reflect.DeepEqual(got.Jobs, []string{"api", "go", "main"}) {
+		t.Fatalf("Jobs = %#v", got.Jobs)
+	}
+}
+
+func TestSelectSupportsNestedPackageJSON(t *testing.T) {
+	got := Select([]string{"apps/web/package.json"}, []config.PathRule{
+		{Pattern: "apps/**/package.json", Jobs: []string{"web"}},
+	}, []string{"ci.yml"})
+
+	if !reflect.DeepEqual(got.Jobs, []string{"web"}) {
 		t.Fatalf("Jobs = %#v", got.Jobs)
 	}
 }

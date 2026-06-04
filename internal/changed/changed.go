@@ -72,40 +72,30 @@ func match(pattern, file string) bool {
 	pattern = filepath.ToSlash(pattern)
 	file = filepath.ToSlash(file)
 	if strings.Contains(pattern, "**") {
-		return doublestar(pattern, file)
+		return matchSegments(strings.Split(pattern, "/"), strings.Split(file, "/"))
 	}
 	ok, err := filepath.Match(pattern, file)
 	return err == nil && ok
 }
 
-func doublestar(pattern, file string) bool {
-	if pattern == "**" {
-		return true
+func matchSegments(pattern, file []string) bool {
+	if len(pattern) == 0 {
+		return len(file) == 0
 	}
-	parts := strings.Split(pattern, "**")
-	if len(parts) != 2 {
-		return false
-	}
-	prefix, suffix := parts[0], parts[1]
-	if prefix != "" && !strings.HasPrefix(file, prefix) {
-		return false
-	}
-	if suffix == "" {
-		return true
-	}
-	suffix = strings.TrimPrefix(suffix, "/")
-	tail := strings.TrimPrefix(file, prefix)
-	for {
-		ok, err := filepath.Match(suffix, strings.TrimPrefix(tail, "/"))
-		if err == nil && ok {
+	if pattern[0] == "**" {
+		if matchSegments(pattern[1:], file) {
 			return true
 		}
-		idx := strings.Index(tail, "/")
-		if idx < 0 {
-			return false
-		}
-		tail = tail[idx+1:]
+		return len(file) > 0 && matchSegments(pattern, file[1:])
 	}
+	if len(file) == 0 {
+		return false
+	}
+	ok, err := filepath.Match(pattern[0], file[0])
+	if err != nil || !ok {
+		return false
+	}
+	return matchSegments(pattern[1:], file[1:])
 }
 
 func splitLines(out string) []string {

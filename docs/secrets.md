@@ -36,10 +36,22 @@ NPM_TOKEN=... bellows run
 
 Bellows passes only the names listed under `allow`.
 
+Audit workflow secret references:
+
+```sh
+bellows secrets audit
+```
+
+Example output:
+
+```text
+[allowed] .github/workflows/ci.yml job publish step Publish uses NPM_TOKEN
+[blocked] .github/workflows/ci.yml job publish step Publish uses OTHER_TOKEN
+```
+
 ## Recommended Practice
 
 - Use low-privilege local tokens.
 - Avoid deployment credentials in local runs.
 - Skip deploy jobs unless you have an explicit local deployment simulation.
 - Do not commit `.env` files or credential files.
-

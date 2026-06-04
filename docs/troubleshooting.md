@@ -107,3 +107,19 @@ job, and suggestion fields.
 ```sh
 bellows cache prune
 ```
+
+## Refresh Local Action And Image Caches
+
+`act` caches downloaded actions and Docker images. If a workflow action version
+or runner image changes but local behavior looks stale, refresh the local cache:
+
+```sh
+rm -rf ~/.cache/act
+docker image prune
+```
+
+For a full Docker layer cleanup:
+
+```sh
+bellows cache prune
+```

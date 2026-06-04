@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -42,8 +43,9 @@ func pathRules(repoRoot string, defaults []string, workflows []workflow.Workflow
 	testJob := firstMatching(jobs, "test", "build", "ci")
 	lintJob := firstMatching(jobs, "lint")
 	var rules []config.PathRule
+	rules = append(rules, inferredPathRules(workflows, defaults)...)
 	if exists(repoRoot, "go.mod") || hasWorkflowStep(workflows, "go test") {
-		rules = append(rules, config.PathRule{Pattern: "*.go", Workflows: defaults, Jobs: compact(testJob)})
+		rules = append(rules, config.PathRule{Pattern: "**/*.go", Workflows: defaults, Jobs: compact(testJob)})
 	}
 	if exists(repoRoot, "package.json") || hasWorkflowStep(workflows, "npm ") || hasWorkflowStep(workflows, "pnpm ") || hasWorkflowStep(workflows, "bun ") {
 		rules = append(rules,
@@ -57,10 +59,65 @@ func pathRules(repoRoot string, defaults []string, workflows []workflow.Workflow
 	}
 	for _, dir := range []string{"apps", "services", "packages"} {
 		if exists(repoRoot, dir) {
-			rules = append(rules, config.PathRule{Pattern: dir + "/*", Workflows: defaults, Jobs: compact(testJob)})
+			rules = append(rules, config.PathRule{Pattern: dir + "/**", Workflows: defaults, Jobs: compact(testJob)})
+		}
+	}
+	return dedupeRules(rules)
+}
+
+var (
+	goPackagePattern = regexp.MustCompile(`go\s+test\s+\./([^ \n]+?)(?:/\.\.\.)?(?:\s|$)`)
+	npmPrefixPattern = regexp.MustCompile(`(?:npm|pnpm|yarn|bun)\s+(?:--prefix|-C)\s+([^ \n]+)`)
+)
+
+func inferredPathRules(workflows []workflow.Workflow, defaults []string) []config.PathRule {
+	var rules []config.PathRule
+	for _, wf := range workflows {
+		workflowRef := filepath.Base(wf.Path)
+		for jobID, job := range wf.Jobs {
+			for _, step := range job.Steps {
+				for _, match := range goPackagePattern.FindAllStringSubmatch(step.Run, -1) {
+					path := cleanRulePath(match[1])
+					if path == "" {
+						continue
+					}
+					rules = append(rules, config.PathRule{Pattern: path + "/**", Workflows: compact(append([]string{workflowRef}, defaults...)...), Jobs: []string{jobID}})
+				}
+				for _, match := range npmPrefixPattern.FindAllStringSubmatch(step.Run, -1) {
+					path := cleanRulePath(match[1])
+					if path == "" {
+						continue
+					}
+					rules = append(rules, config.PathRule{Pattern: path + "/**", Workflows: compact(append([]string{workflowRef}, defaults...)...), Jobs: []string{jobID}})
+				}
+			}
 		}
 	}
 	return rules
+}
+
+func cleanRulePath(path string) string {
+	path = strings.TrimPrefix(path, "./")
+	path = strings.TrimSuffix(path, "/...")
+	path = strings.Trim(path, `"'`)
+	if path == "." || path == "..." || path == "" {
+		return ""
+	}
+	return filepath.ToSlash(path)
+}
+
+func dedupeRules(rules []config.PathRule) []config.PathRule {
+	seen := map[string]bool{}
+	var out []config.PathRule
+	for _, rule := range rules {
+		key := rule.Pattern + "\x00" + strings.Join(rule.Workflows, ",") + "\x00" + strings.Join(rule.Jobs, ",")
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, rule)
+	}
+	return out
 }
 
 func jobIDs(workflows []workflow.Workflow) []string {
@@ -90,9 +147,11 @@ func firstMatching(values []string, needles ...string) string {
 }
 
 func compact(values ...string) []string {
+	seen := map[string]bool{}
 	var out []string
 	for _, value := range values {
-		if value != "" {
+		if value != "" && !seen[value] {
+			seen[value] = true
 			out = append(out, value)
 		}
 	}
