@@ -19,8 +19,6 @@ homebrew_casks:
     binaries: [bellows]
     generate_completions_from_executable:
       executable: "bin/bellows"
-      args:
-        - completion
       shell_parameter_format: cobra
       shells:
         - bash

@@ -29,6 +29,8 @@ jobs:
 
   homebrew-install:
     runs-on: macos-latest
+    env:
+      HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
     steps:
       - name: Install Bellows from Homebrew
         run: |
@@ -49,7 +51,9 @@ jobs:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
       - name: Download release artifacts
-        run: gh release download "$TAG" --repo dotbrains/bellows --pattern "bellows_*_linux_amd64.tar.gz" --dir dist
+        run: |
+          mkdir -p dist
+          gh release download "$TAG" --repo dotbrains/bellows --pattern "bellows_linux_amd64.tar.gz" --dir dist
 
       - name: Check archive binary
         run: |
