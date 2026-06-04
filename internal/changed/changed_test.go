@@ -30,3 +30,16 @@ func TestSelectUsesDefaultsForJobOnlyRules(t *testing.T) {
 		t.Fatalf("Workflows = %#v", got.Workflows)
 	}
 }
+
+func TestSelectSupportsDoubleStarPathRules(t *testing.T) {
+	got := Select([]string{"services/api/internal/server/main.go"}, []config.PathRule{
+		{Pattern: "services/api/**", Jobs: []string{"api"}},
+	}, []string{"ci.yml"})
+
+	if !reflect.DeepEqual(got.Workflows, []string{"ci.yml"}) {
+		t.Fatalf("Workflows = %#v", got.Workflows)
+	}
+	if !reflect.DeepEqual(got.Jobs, []string{"api"}) {
+		t.Fatalf("Jobs = %#v", got.Jobs)
+	}
+}

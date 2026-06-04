@@ -22,6 +22,7 @@ import (
 	"github.com/dotbrains/bellows/internal/policy"
 	"github.com/dotbrains/bellows/internal/precommit"
 	"github.com/dotbrains/bellows/internal/schemas"
+	"github.com/dotbrains/bellows/internal/secrets"
 	"github.com/dotbrains/bellows/internal/workflow"
 	"github.com/spf13/cobra"
 )
@@ -55,6 +56,8 @@ func newRootCmd(version string) *cobra.Command {
 	root.AddCommand(newCompatCmd(opts))
 	root.AddCommand(newHooksCmd(opts))
 	root.AddCommand(newMigrateCmd(opts))
+	root.AddCommand(newSecretsCmd(opts))
+	root.AddCommand(newReleaseCmd(opts))
 	root.AddCommand(newExplainCmd(opts))
 	root.AddCommand(newCompletionCmd(root))
 
@@ -240,6 +243,15 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 					}
 				}
 				cfg = fixedCfg
+				if fixDryRun && len(fixes) > 0 && fixes[0] != "no safe fixes available" && format == "text" {
+					diff, err := doctorFixDiff(root, cfg)
+					if err != nil {
+						return err
+					}
+					if diff != "" {
+						cmd.Print(diff)
+					}
+				}
 				if !fixDryRun && len(fixes) > 0 && fixes[0] != "no safe fixes available" {
 					if err := config.PatchSafeFixes(filepath.Join(root, config.FileName), cfg); err != nil {
 						return err
@@ -288,6 +300,37 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 	cmd.Flags().BoolVar(&fix, "fix", false, "apply safe .bellows.yml fixes before reporting diagnostics")
 	cmd.Flags().BoolVar(&fixDryRun, "fix-dry-run", false, "preview safe .bellows.yml fixes without writing files")
 	return cmd
+}
+
+func doctorFixDiff(root string, cfg *config.Config) (string, error) {
+	path := filepath.Join(root, config.FileName)
+	original, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	tmp, err := os.CreateTemp("", "bellows-fix-*.yml")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(original); err != nil {
+		tmp.Close()
+		return "", err
+	}
+	if err := tmp.Close(); err != nil {
+		return "", err
+	}
+	if err := config.PatchSafeFixes(tmp.Name(), cfg); err != nil {
+		return "", err
+	}
+	out, err := exec.Command("diff", "-u", "--label", config.FileName, "--label", config.FileName+" (fixed)", path, tmp.Name()).CombinedOutput()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) || exitErr.ExitCode() > 1 {
+			return "", fmt.Errorf("creating fix diff: %w", err)
+		}
+	}
+	return string(out), nil
 }
 
 func newCompatCmd(opts *cliOptions) *cobra.Command {
@@ -471,6 +514,101 @@ func newCacheCmd() *cobra.Command {
 				return err
 			}
 			return runPassthrough("", "docker", "builder", "prune", "--force")
+		},
+	})
+	return cmd
+}
+
+func newSecretsCmd(opts *cliOptions) *cobra.Command {
+	cmd := &cobra.Command{Use: "secrets", Short: "Inspect local secret usage"}
+	var format string
+	audit := &cobra.Command{
+		Use:   "audit",
+		Short: "Show workflow secret references and local allowlist status",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			cfg, err := config.Load(root)
+			if err != nil {
+				return err
+			}
+			workflows, err := workflow.Discover(root)
+			if err != nil {
+				return err
+			}
+			refs := secrets.Audit(cfg, workflows)
+			switch format {
+			case "json":
+				return json.NewEncoder(cmd.OutOrStdout()).Encode(refs)
+			case "text":
+				if len(refs) == 0 {
+					cmd.Println("no workflow secrets referenced")
+					return nil
+				}
+				for _, ref := range refs {
+					status := "blocked"
+					if ref.Allowed {
+						status = "allowed"
+					}
+					cmd.Printf("[%s] %s job %s step %s uses %s\n", status, ref.Workflow, ref.Job, ref.Step, ref.Secret)
+				}
+				return nil
+			default:
+				return fmt.Errorf("unsupported format %q", format)
+			}
+		},
+	}
+	audit.Flags().StringVar(&format, "format", "text", "output format: text or json")
+	cmd.AddCommand(audit)
+	return cmd
+}
+
+func newReleaseCmd(opts *cliOptions) *cobra.Command {
+	cmd := &cobra.Command{Use: "release", Short: "Run release readiness checks"}
+	cmd.AddCommand(&cobra.Command{
+		Use:   "check",
+		Short: "Run the local release readiness suite",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			steps := [][]string{
+				{"go", "test", "./..."},
+				{"golangci-lint", "run"},
+				{"actionlint"},
+				{"goreleaser", "check"},
+				{"go", "run", ".", "config", "validate"},
+				{"go", "run", ".", "policy"},
+				{"go", "run", ".", "compat"},
+				{"go", "run", ".", "run", "--list", "--estimate"},
+				{"goreleaser", "release", "--snapshot", "--clean", "--skip=publish"},
+			}
+			for _, step := range steps {
+				cmd.Printf("$ %s\n", strings.Join(step, " "))
+				if err := runPassthrough(root, step[0], step[1:]...); err != nil {
+					return err
+				}
+			}
+			archive := fmt.Sprintf("dist/bellows_%s_%s.tar.gz", goEnv("GOOS"), goEnv("GOARCH"))
+			smoke := filepath.Join(root, "dist", "smoke")
+			_ = os.RemoveAll(smoke)
+			if err := os.MkdirAll(smoke, 0o755); err != nil {
+				return err
+			}
+			if err := runPassthrough(root, "tar", "-xzf", archive, "-C", "dist/smoke"); err != nil {
+				return err
+			}
+			if err := runPassthrough(root, filepath.Join("dist", "smoke", "bellows"), "--version"); err != nil {
+				return err
+			}
+			smokeCompletion := exec.Command(filepath.Join("dist", "smoke", "bellows"), "completion", "bash")
+			smokeCompletion.Dir = root
+			smokeCompletion.Stdout = io.Discard
+			smokeCompletion.Stderr = os.Stderr
+			return smokeCompletion.Run()
 		},
 	})
 	return cmd
@@ -886,6 +1024,14 @@ func runPassthrough(dir, name string, args ...string) error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	return cmd.Run()
+}
+
+func goEnv(name string) string {
+	out, err := exec.Command("go", "env", name).Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
 
 func selectedWorkflows(flag string, defaults []string) []string {

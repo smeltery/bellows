@@ -62,6 +62,10 @@ execution rules.
 ```yaml
 policy:
   cloud_jobs: error
+  waivers:
+    - code: upload_artifact
+      job: test
+      reason: guarded by env.ACT in a shared action
 ```
 
 `policy.cloud_jobs` values:
@@ -70,6 +74,9 @@ policy:
   are not listed in `skip.jobs`.
 - `warn`: report the same issue as a warning.
 - `off`: disable this rule.
+
+Waivers require a `code` and `reason`. `job` is optional; omit it only when the
+waiver intentionally applies to every job for that code.
 
 ## Fields
 

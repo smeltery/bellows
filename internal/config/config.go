@@ -47,7 +47,14 @@ type SkipConfig struct {
 }
 
 type PolicyConfig struct {
-	CloudJobs string `yaml:"cloud_jobs,omitempty"`
+	CloudJobs string         `yaml:"cloud_jobs,omitempty"`
+	Waivers   []PolicyWaiver `yaml:"waivers,omitempty"`
+}
+
+type PolicyWaiver struct {
+	Code   string `yaml:"code,omitempty"`
+	Job    string `yaml:"job,omitempty"`
+	Reason string `yaml:"reason,omitempty"`
 }
 
 type PrecommitConfig struct {
@@ -107,6 +114,9 @@ func LoadFrom(path string) (*Config, error) {
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("parsing config %s: %w", path, err)
 	}
+	if err := validateSchemaShape(data); err != nil {
+		return nil, err
+	}
 	cfg.ApplyDefaults()
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -115,6 +125,62 @@ func LoadFrom(path string) (*Config, error) {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+func validateSchemaShape(data []byte) error {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return err
+	}
+	root := mappingRoot(&doc)
+	if root == nil {
+		return nil
+	}
+	allowed := map[string]map[string]bool{
+		"":          keys("version", "default_workflows", "event", "docker", "runner", "secrets", "skip", "policy", "precommit"),
+		"docker":    keys("platform", "pull"),
+		"runner":    keys("default_image", "map"),
+		"secrets":   keys("mode", "allow"),
+		"skip":      keys("jobs", "steps_matching"),
+		"policy":    keys("cloud_jobs", "waivers"),
+		"precommit": keys("stage", "mode", "timeout_seconds", "paths"),
+	}
+	return validateKeys(root, "", allowed)
+}
+
+func validateKeys(node *yaml.Node, path string, allowed map[string]map[string]bool) error {
+	keys, ok := allowed[path]
+	if !ok || node.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		key := node.Content[i].Value
+		if !keys[key] {
+			if path == "" {
+				return fmt.Errorf("unsupported config key %q", key)
+			}
+			return fmt.Errorf("unsupported config key %q under %s", key, path)
+		}
+		if err := validateKeys(node.Content[i+1], keyPath(path, key), allowed); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func keys(values ...string) map[string]bool {
+	out := map[string]bool{}
+	for _, value := range values {
+		out[value] = true
+	}
+	return out
+}
+
+func keyPath(parent, key string) string {
+	if parent == "" {
+		return key
+	}
+	return parent + "." + key
 }
 
 func SaveTo(cfg *Config, path string) error {
@@ -319,6 +385,14 @@ func (c *Config) Validate() error {
 	case "", "error", "warn", "off":
 	default:
 		return fmt.Errorf("unsupported policy.cloud_jobs %q", c.Policy.CloudJobs)
+	}
+	for i, waiver := range c.Policy.Waivers {
+		if waiver.Code == "" {
+			return fmt.Errorf("policy.waivers[%d].code is required", i)
+		}
+		if waiver.Reason == "" {
+			return fmt.Errorf("policy.waivers[%d].reason is required", i)
+		}
 	}
 	return nil
 }

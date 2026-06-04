@@ -33,7 +33,7 @@ func TestNewRootCmdRegistersMVPCommands(t *testing.T) {
 	for _, c := range root.Commands() {
 		cmds[c.Name()] = true
 	}
-	for _, want := range []string{"init", "run", "doctor", "cache", "config", "policy", "compat", "hooks", "migrate", "explain"} {
+	for _, want := range []string{"init", "run", "doctor", "cache", "config", "policy", "compat", "hooks", "migrate", "secrets", "release", "explain"} {
 		if !cmds[want] {
 			t.Errorf("missing subcommand %q", want)
 		}
@@ -246,6 +246,14 @@ func TestHooksStatusJSON(t *testing.T) {
 	if !status.Installed || !status.BellowsOnly || status.Stage != "pre-push" {
 		t.Fatalf("unexpected status: %#v", status)
 	}
+	root = newRootCmd("test")
+	buf.Reset()
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "hooks", "status"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	assertGolden(t, "hooks-status.txt", buf.String())
 }
 
 func TestDoctorFixDryRunDoesNotWriteConfig(t *testing.T) {
@@ -266,6 +274,9 @@ func TestDoctorFixDryRunDoesNotWriteConfig(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "[fix] mapped runner blacksmith-16vcpu-ubuntu-2404") {
 		t.Fatalf("dry-run output missing fix preview:\n%s", buf.String())
+	}
+	if !strings.Contains(buf.String(), "--- .bellows.yml") || !strings.Contains(buf.String(), "+++ .bellows.yml (fixed)") {
+		t.Fatalf("dry-run output missing diff:\n%s", buf.String())
 	}
 	if got := readFile(t, filepath.Join(repo, ".bellows.yml")); got != original {
 		t.Fatalf("fix dry-run changed config:\n%s", got)
@@ -382,6 +393,7 @@ jobs:
 	if !strings.Contains(buf.String(), "estimate: 1 runnable jobs, 1 skipped jobs, 1 avoided cloud jobs") {
 		t.Fatalf("missing estimate:\n%s", buf.String())
 	}
+	assertGolden(t, "run-list-estimate.txt", buf.String())
 }
 
 func TestRunPrecommitChangedFilesListsOnlyMatchedJob(t *testing.T) {
@@ -542,6 +554,69 @@ jobs:
 	}
 }
 
+func TestPolicyCommandHonorsWaivers(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./deploy.sh
+`)
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte(`version: 1
+policy:
+  waivers:
+    - code: cloud_job_not_skipped
+      job: deploy
+      reason: local deployment simulator is used
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "policy"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "policy ok") {
+		t.Fatalf("unexpected policy output:\n%s", buf.String())
+	}
+	assertGolden(t, "policy-ok.txt", buf.String())
+}
+
+func TestSecretsAuditReportsAllowlist(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish
+        run: echo "${{ secrets.NPM_TOKEN }} ${{ secrets.OTHER_TOKEN }}"
+`)
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte(`version: 1
+secrets:
+  mode: env
+  allow:
+    - NPM_TOKEN
+policy:
+  cloud_jobs: off
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "secrets", "audit"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "[allowed]") || !strings.Contains(buf.String(), "[blocked]") {
+		t.Fatalf("unexpected secrets audit:\n%s", buf.String())
+	}
+}
+
 func TestCompatCommandReportsUnsupportedFeatures(t *testing.T) {
 	repo := t.TempDir()
 	writeWorkflowBody(t, repo, "release.yml", `name: Release
@@ -589,6 +664,9 @@ jobs:
 		if !strings.Contains(buf.String(), want) {
 			t.Fatalf("migration output missing %q:\n%s", want, buf.String())
 		}
+	}
+	if !strings.Contains(buf.String(), "pattern: '*.go'") {
+		t.Fatalf("migration output missing path rules:\n%s", buf.String())
 	}
 }
 
@@ -653,6 +731,36 @@ func TestExamplesSmoke(t *testing.T) {
 	}
 }
 
+func TestExamplesMigrationEndToEnd(t *testing.T) {
+	root := filepath.Join("..", "examples")
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		repo := filepath.Join(root, entry.Name())
+		t.Run(entry.Name(), func(t *testing.T) {
+			commands := [][]string{
+				{"migrate", "github-actions"},
+				{"doctor", "--fix", "--fix-dry-run"},
+				{"hooks", "status", "--format", "json"},
+				{"run", "--list"},
+			}
+			for _, args := range commands {
+				cmd := newRootCmd("test")
+				cmd.SetOut(&bytes.Buffer{})
+				cmd.SetArgs(append([]string{"--repo", repo}, args...))
+				if err := cmd.Execute(); err != nil {
+					t.Fatalf("bellows %s failed: %v", strings.Join(args, " "), err)
+				}
+			}
+		})
+	}
+}
+
 func TestCompletionCommandGeneratesZsh(t *testing.T) {
 	root := newRootCmd("test")
 	buf := &bytes.Buffer{}
@@ -699,5 +807,16 @@ func runGit(t *testing.T, dir string, args ...string) {
 	cmd.Dir = dir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git %v failed: %v\n%s", args, err, string(out))
+	}
+}
+
+func assertGolden(t *testing.T, name, got string) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", "golden", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != string(data) {
+		t.Fatalf("%s mismatch\n got:\n%s\nwant:\n%s", name, got, string(data))
 	}
 }

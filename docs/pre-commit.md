@@ -101,13 +101,15 @@ precommit:
   paths:
     - pattern: "docs/*"
       workflows: [docs.yml]
-    - pattern: "*.go"
+    - pattern: "**/*.go"
       workflows: [ci.yml]
       jobs: [test]
 ```
 
 When no changed file matches a rule, `bellows run --precommit` exits without
 running Docker.
+
+Patterns support `**` for nested monorepo paths.
 
 Debug rule selection without running Docker:
 

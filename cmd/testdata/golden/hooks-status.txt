@@ -1,0 +1,5 @@
+path: .pre-commit-config.yaml
+exists: true
+installed: true
+bellows_only: true
+stage: pre-push

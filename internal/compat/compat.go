@@ -65,15 +65,11 @@ func Report(cfg *config.Config, workflows []workflow.Workflow) []Item {
 	for _, wf := range workflows {
 		for id, job := range wf.Jobs {
 			for _, step := range job.Steps {
-				uses := strings.ToLower(step.Uses)
-				switch {
-				case strings.Contains(uses, "docker/login-action"):
-					items = append(items, partial(wf.Path, id, "registry-login", "container registry login requires local credentials", "skip publish jobs or provide local registry credentials"))
-				case strings.Contains(uses, "github-script"):
-					items = append(items, partial(wf.Path, id, "github-api", "GitHub API calls may need a local token", "guard the step for local runs or provide a scoped token"))
-				case strings.Contains(uses, "softprops/action-gh-release") || strings.Contains(uses, "goreleaser/goreleaser-action"):
-					items = append(items, unsupported(wf.Path, id, "release-publish", "release publishing should stay in cloud CI", "add this job to skip.jobs"))
+				rule, ok := MatchAction(step.Uses)
+				if !ok {
+					continue
 				}
+				items = append(items, Item{Status: rule.Status, Workflow: wf.Path, Job: id, Feature: rule.Feature, Message: rule.Message, Suggestion: rule.Suggestion})
 			}
 		}
 	}

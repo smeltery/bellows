@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/dotbrains/bellows/internal/config"
 )
@@ -42,8 +43,7 @@ func Select(files []string, rules []config.PathRule, defaults []string) Selectio
 	jobSet := map[string]bool{}
 	for _, file := range files {
 		for _, rule := range rules {
-			ok, err := filepath.Match(rule.Pattern, file)
-			if err != nil || !ok {
+			if !match(rule.Pattern, file) {
 				continue
 			}
 			for _, wf := range rule.Workflows {
@@ -66,6 +66,46 @@ func Select(files []string, rules []config.PathRule, defaults []string) Selectio
 		selection.Workflows = append([]string(nil), defaults...)
 	}
 	return selection
+}
+
+func match(pattern, file string) bool {
+	pattern = filepath.ToSlash(pattern)
+	file = filepath.ToSlash(file)
+	if strings.Contains(pattern, "**") {
+		return doublestar(pattern, file)
+	}
+	ok, err := filepath.Match(pattern, file)
+	return err == nil && ok
+}
+
+func doublestar(pattern, file string) bool {
+	if pattern == "**" {
+		return true
+	}
+	parts := strings.Split(pattern, "**")
+	if len(parts) != 2 {
+		return false
+	}
+	prefix, suffix := parts[0], parts[1]
+	if prefix != "" && !strings.HasPrefix(file, prefix) {
+		return false
+	}
+	if suffix == "" {
+		return true
+	}
+	suffix = strings.TrimPrefix(suffix, "/")
+	tail := strings.TrimPrefix(file, prefix)
+	for {
+		ok, err := filepath.Match(suffix, strings.TrimPrefix(tail, "/"))
+		if err == nil && ok {
+			return true
+		}
+		idx := strings.Index(tail, "/")
+		if idx < 0 {
+			return false
+		}
+		tail = tail[idx+1:]
+	}
 }
 
 func splitLines(out string) []string {

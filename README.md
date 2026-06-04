@@ -121,6 +121,8 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 | `bellows compat` | Report supported, partial, and unsupported local workflow features. |
 | `bellows hooks install --stage pre-push` | Install the generated Bellows pre-push hook. |
 | `bellows hooks status --format json` | Report hook installation state for automation. |
+| `bellows secrets audit` | Show workflow secret references and local allowlist state. |
+| `bellows release check` | Run the local release-readiness suite. |
 | `bellows config validate` | Validate `.bellows.yml`. |
 | `bellows policy` | Check local execution policy. |
 | `bellows completion zsh` | Generate shell completions. |

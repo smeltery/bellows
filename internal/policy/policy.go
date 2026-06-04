@@ -19,6 +19,7 @@ type Violation struct {
 
 func Check(cfg *config.Config, workflows []workflow.Workflow) []Violation {
 	var out []Violation
+	waivers := waiverSet(cfg.Policy.Waivers)
 	skipped := map[string]bool{}
 	for _, job := range cfg.Skip.Jobs {
 		skipped[job] = true
@@ -31,14 +32,17 @@ func Check(cfg *config.Config, workflows []workflow.Workflow) []Violation {
 		for _, wf := range workflows {
 			for _, job := range workflow.CloudLikeJobIDs([]workflow.Workflow{wf}) {
 				if !skipped[job] {
-					out = append(out, Violation{
+					violation := Violation{
 						Level:      cloudJobLevel,
 						Code:       "cloud_job_not_skipped",
 						Workflow:   wf.Path,
 						Job:        job,
 						Message:    fmt.Sprintf("cloud-like job %s is not skipped locally", job),
 						Suggestion: "add this job to skip.jobs",
-					})
+					}
+					if !waived(waivers, violation) {
+						out = append(out, violation)
+					}
 				}
 			}
 		}
@@ -49,17 +53,33 @@ func Check(cfg *config.Config, workflows []workflow.Workflow) []Violation {
 		}
 		switch finding.Code {
 		case "unmapped_runner", "upload_artifact", "aws_credentials", "oidc_permission", "deployment_environment":
-			out = append(out, Violation{
+			violation := Violation{
 				Level:      policyLevel(finding),
 				Code:       finding.Code,
 				Workflow:   finding.Workflow,
 				Job:        finding.Job,
 				Message:    finding.Message,
 				Suggestion: finding.Suggestion,
-			})
+			}
+			if !waived(waivers, violation) {
+				out = append(out, violation)
+			}
 		}
 	}
 	return out
+}
+
+func waiverSet(waivers []config.PolicyWaiver) map[string]bool {
+	out := map[string]bool{}
+	for _, waiver := range waivers {
+		out[waiver.Code+"\x00"+waiver.Job] = true
+		out[waiver.Code+"\x00"] = true
+	}
+	return out
+}
+
+func waived(waivers map[string]bool, violation Violation) bool {
+	return waivers[violation.Code+"\x00"+violation.Job] || waivers[violation.Code+"\x00"]
 }
 
 func policyLevel(finding doctor.Finding) string {

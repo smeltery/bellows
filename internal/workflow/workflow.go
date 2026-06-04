@@ -30,6 +30,7 @@ type Step struct {
 	Uses string
 	Run  string
 	If   string
+	With map[string]any
 }
 
 type rawWorkflow struct {
@@ -49,10 +50,11 @@ type rawJob struct {
 }
 
 type rawStep struct {
-	Name string `yaml:"name"`
-	Uses string `yaml:"uses"`
-	Run  string `yaml:"run"`
-	If   string `yaml:"if"`
+	Name string         `yaml:"name"`
+	Uses string         `yaml:"uses"`
+	Run  string         `yaml:"run"`
+	If   string         `yaml:"if"`
+	With map[string]any `yaml:"with"`
 }
 
 type rawStrategy struct {

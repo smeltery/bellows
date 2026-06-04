@@ -188,3 +188,25 @@ func TestLoadFrom_InvalidYAML(t *testing.T) {
 		t.Fatal("expected error for invalid YAML")
 	}
 }
+
+func TestLoadFromRejectsUnknownKeys(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, ".bellows.yml")
+	if err := os.WriteFile(path, []byte("version: 1\nunknown: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadFrom(path); err == nil || !strings.Contains(err.Error(), "unsupported config key") {
+		t.Fatalf("expected unknown key error, got %v", err)
+	}
+}
+
+func TestLoadFromRequiresPolicyWaiverReason(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, ".bellows.yml")
+	if err := os.WriteFile(path, []byte("version: 1\npolicy:\n  waivers:\n    - code: upload_artifact\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadFrom(path); err == nil || !strings.Contains(err.Error(), "reason is required") {
+		t.Fatalf("expected waiver reason error, got %v", err)
+	}
+}

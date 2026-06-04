@@ -66,8 +66,9 @@ warnings should block a push.
 - add cloud-like job ids such as `deploy`, `publish`, and `release` to
   `skip.jobs`.
 
-`--fix --fix-dry-run` prints the same fix plan and reports diagnostics using the
-fixed in-memory config, but does not write `.bellows.yml`.
+`--fix --fix-dry-run` prints the same fix plan, shows a unified diff preview,
+and reports diagnostics using the fixed in-memory config, but does not write
+`.bellows.yml`.
 
 ## `bellows explain`
 
@@ -152,6 +153,8 @@ Policy checks include cloud-like jobs not listed in `skip.jobs`, unguarded
 artifact uploads, local OIDC gaps, deployment environments, and unmapped
 runners.
 
+Use `policy.waivers` in `.bellows.yml` for explicit exceptions with reasons.
+
 ## `bellows compat`
 
 Report whether workflow features are supported locally, partially supported, or
@@ -184,6 +187,30 @@ bellows hooks uninstall
 
 `hooks status --format json` reports whether the file exists, whether Bellows is
 installed, whether the file is Bellows-only, and the configured stage.
+
+## `bellows secrets audit`
+
+Show workflow references to `${{ secrets.NAME }}` and whether each secret is
+allowed for local runs.
+
+```sh
+bellows secrets audit
+bellows secrets audit --format json
+```
+
+Secrets are considered allowed when listed under `secrets.allow` in
+`.bellows.yml`.
+
+## `bellows release check`
+
+Run the local release-readiness suite from the CLI.
+
+```sh
+bellows release check
+```
+
+The command runs tests, lint, workflow validation, GoReleaser validation,
+Bellows dogfood checks, a snapshot build, and a local release archive smoke.
 
 ## `bellows migrate github-actions`
 
