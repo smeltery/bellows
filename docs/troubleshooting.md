@@ -12,6 +12,7 @@ Then rerun:
 
 ```sh
 bellows doctor
+bellows self-test
 ```
 
 ## `docker is not reachable`

@@ -32,6 +32,7 @@ jobs:
     runs-on: macos-latest
     env:
       HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+      TAG: ${{ github.event.release.tag_name || inputs.tag || 'latest' }}
     steps:
       - name: Install Bellows from Homebrew
         run: |
@@ -41,7 +42,11 @@ jobs:
 
       - name: Check installed binary
         run: |
-          bellows --version
+          VERSION_OUTPUT="$(bellows --version)"
+          echo "$VERSION_OUTPUT"
+          if [ "$TAG" != "latest" ]; then
+            test "$VERSION_OUTPUT" = "bellows version ${TAG#v}"
+          fi
           bellows --help
 
   release-archive:

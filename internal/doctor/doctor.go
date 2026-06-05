@@ -58,14 +58,14 @@ func analyzeJob(cfg *config.Config, workflowPath, id string, job workflow.Job) [
 				Message:    fmt.Sprintf("job %s uses dynamic runner expression %s", id, label),
 				Suggestion: "ensure every possible matrix runner value is mapped in .bellows.yml",
 			})
-			for _, matrixLabel := range matrixValuesForExpression(label, job.Matrix) {
+			for _, matrixLabel := range job.MatrixRunnerLabels() {
 				findings = append(findings, analyzeRunner(cfg, workflowPath, id, matrixLabel)...)
 			}
 			continue
 		}
 		findings = append(findings, analyzeRunner(cfg, workflowPath, id, label)...)
 	}
-	if job.Permissions["id-token"] == "write" {
+	if job.UsesOIDC() {
 		findings = append(findings, Finding{
 			Level:      "warn",
 			Code:       "oidc_permission",
@@ -75,7 +75,7 @@ func analyzeJob(cfg *config.Config, workflowPath, id string, job workflow.Job) [
 			Suggestion: "skip this job locally or provide a local credential path",
 		})
 	}
-	if len(job.Environment) > 0 {
+	if job.UsesDeploymentEnvironment() {
 		findings = append(findings, Finding{
 			Level:      "warn",
 			Code:       "deployment_environment",
@@ -122,10 +122,8 @@ func analyzeRunner(cfg *config.Config, workflowPath, id, label string) []Finding
 }
 
 func analyzeStep(workflowPath, id string, step workflow.Step) []Finding {
-	uses := strings.ToLower(step.Uses)
-	condition := strings.ToLower(step.If)
 	switch {
-	case strings.Contains(uses, "aws-actions/configure-aws-credentials"):
+	case step.UsesAction("aws-actions/configure-aws-credentials"):
 		return []Finding{{
 			Level:      "warn",
 			Code:       "aws_credentials",
@@ -134,7 +132,7 @@ func analyzeStep(workflowPath, id string, step workflow.Step) []Finding {
 			Message:    fmt.Sprintf("job %s uses AWS credentials; local OIDC is not emulated", id),
 			Suggestion: "skip this job locally or configure explicit local AWS credentials",
 		}}
-	case strings.Contains(uses, "actions/upload-artifact") && !strings.Contains(condition, "env.act") && !strings.Contains(condition, "env.bellows"):
+	case step.UsesAction("actions/upload-artifact") && !step.IsGuardedForLocal():
 		return []Finding{{
 			Level:      "warn",
 			Code:       "upload_artifact",
@@ -143,7 +141,7 @@ func analyzeStep(workflowPath, id string, step workflow.Step) []Finding {
 			Message:    fmt.Sprintf("job %s uploads artifacts; act may not provide GitHub artifact runtime credentials", id),
 			Suggestion: "guard this step with if: ${{ env.ACT != 'true' }}",
 		}}
-	case strings.Contains(uses, "actions/cache"):
+	case step.UsesAction("actions/cache"):
 		return []Finding{{
 			Level:      "warn",
 			Code:       "actions_cache",
@@ -155,13 +153,4 @@ func analyzeStep(workflowPath, id string, step workflow.Step) []Finding {
 	default:
 		return nil
 	}
-}
-
-func matrixValuesForExpression(expr string, matrix map[string][]string) []string {
-	for key, values := range matrix {
-		if strings.Contains(expr, "matrix."+key) {
-			return values
-		}
-	}
-	return nil
 }

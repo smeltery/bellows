@@ -10,3 +10,6 @@ var Doctor []byte
 
 //go:embed explain.schema.json
 var Explain []byte
+
+//go:embed bundle.schema.json
+var Bundle []byte

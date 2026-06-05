@@ -63,14 +63,12 @@ func Report(cfg *config.Config, workflows []workflow.Workflow) []Item {
 		}
 	}
 	for _, wf := range workflows {
-		for id, job := range wf.Jobs {
-			for _, step := range job.Steps {
-				rule, ok := MatchAction(step.Uses)
-				if !ok {
-					continue
-				}
-				items = append(items, Item{Status: rule.Status, Workflow: wf.Path, Job: id, Feature: rule.Feature, Message: rule.Message, Suggestion: rule.Suggestion})
+		for _, use := range wf.ActionUses() {
+			rule, ok := MatchAction(use.Step.Uses)
+			if !ok {
+				continue
 			}
+			items = append(items, Item{Status: rule.Status, Workflow: wf.Path, Job: use.Job, Feature: rule.Feature, Message: rule.Message, Suggestion: rule.Suggestion})
 		}
 	}
 	sort.SliceStable(items, func(i, j int) bool {

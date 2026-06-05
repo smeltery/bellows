@@ -35,6 +35,18 @@ golangci-lint run
 goreleaser check
 ```
 
+## Release Tool Versions
+
+The scheduled release check pins tool versions in
+[`.github/workflows/release-check.yml`](../.github/workflows/release-check.yml):
+
+- actionlint `v1.7.9`
+- golangci-lint `v2.11.2`
+- GoReleaser `v2.16.0`
+
+Keep local Flox tooling and the workflow pins aligned when changing release
+checks.
+
 ## Local Release Check
 
 Use GoReleaser snapshot mode to verify archives and the Homebrew cask without
@@ -49,4 +61,3 @@ Remove generated artifacts afterward:
 ```sh
 rm -rf dist
 ```
-

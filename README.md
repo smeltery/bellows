@@ -117,6 +117,7 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 | `bellows doctor --fix` | Apply safe `.bellows.yml` fixes. |
 | `bellows doctor --fix --fix-dry-run` | Preview safe `.bellows.yml` fixes without writing. |
 | `bellows doctor bundle` | Emit sanitized diagnostics for support and agents. |
+| `bellows self-test` | Check this Bellows install and repository. |
 | `bellows explain --format json` | Emit the resolved local execution plan as JSON. |
 | `bellows explain changed-files` | Show how changed Git files select workflows and jobs. |
 | `bellows compat` | Report supported, partial, and unsupported local workflow features. |

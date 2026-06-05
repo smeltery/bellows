@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -109,5 +110,32 @@ func TestResolve(t *testing.T) {
 		if got := Resolve(root, input); got != want {
 			t.Errorf("Resolve(%q) = %q, want %q", input, got, want)
 		}
+	}
+}
+
+func TestLoadRealisticWorkflowFacts(t *testing.T) {
+	wf, err := Load(filepath.Join("testdata", "realistic.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	testJob := wf.Jobs["test"]
+	if got := strings.Join(testJob.MatrixRunnerLabels(), ","); got != "ubuntu-latest,blacksmith-4vcpu-ubuntu-2404" {
+		t.Fatalf("matrix runner labels = %q", got)
+	}
+	deploy := wf.Jobs["deploy"]
+	if !deploy.UsesOIDC() || !deploy.UsesDeploymentEnvironment() {
+		t.Fatalf("deploy facts missing: %#v", deploy)
+	}
+	var sawCache, sawRelease bool
+	for _, use := range wf.ActionUses() {
+		if use.Step.UsesAction("actions/cache") {
+			sawCache = true
+		}
+		if use.Step.UsesAction("goreleaser/goreleaser-action") {
+			sawRelease = true
+		}
+	}
+	if !sawCache || !sawRelease {
+		t.Fatalf("action facts missing cache=%t release=%t", sawCache, sawRelease)
 	}
 }

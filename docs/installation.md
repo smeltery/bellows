@@ -15,6 +15,7 @@ Verify:
 
 ```sh
 bellows --version
+bellows self-test
 ```
 
 ## Go Install

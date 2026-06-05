@@ -75,6 +75,18 @@ and reports diagnostics using the fixed in-memory config, but does not write
 config summaries, workflow/job summaries, doctor findings, compatibility,
 policy, secret references, and hook status. It does not include secret values.
 
+## `bellows self-test`
+
+Check the Bellows binary, required local tools, repository config, workflow
+discovery, and plan generation.
+
+```sh
+bellows self-test
+bellows self-test --format json
+```
+
+Use this when validating a fresh install before running Docker-backed workflows.
+
 ## `bellows explain`
 
 Show the configured event, default workflows, and discovered jobs.
@@ -142,6 +154,7 @@ bellows config validate
 bellows config print-schema
 bellows config print-schema doctor
 bellows config print-schema explain
+bellows config print-schema bundle
 ```
 
 ## `bellows policy`

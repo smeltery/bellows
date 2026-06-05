@@ -9,7 +9,7 @@ import (
 
 func TestJSONSchemasAreValidJSON(t *testing.T) {
 	root := filepath.Join("..", "..", "docs", "schemas")
-	for _, name := range []string{"bellows.schema.json", "doctor.schema.json", "explain.schema.json"} {
+	for _, name := range []string{"bellows.schema.json", "doctor.schema.json", "explain.schema.json", "bundle.schema.json"} {
 		data, err := os.ReadFile(filepath.Join(root, name))
 		if err != nil {
 			t.Fatal(err)
@@ -27,7 +27,7 @@ func TestJSONSchemasAreValidJSON(t *testing.T) {
 func TestEmbeddedSchemasMatchDocs(t *testing.T) {
 	docsRoot := filepath.Join("..", "..", "docs", "schemas")
 	internalRoot := filepath.Join("..", "schemas")
-	for _, name := range []string{"bellows.schema.json", "doctor.schema.json", "explain.schema.json"} {
+	for _, name := range []string{"bellows.schema.json", "doctor.schema.json", "explain.schema.json", "bundle.schema.json"} {
 		docs, err := os.ReadFile(filepath.Join(docsRoot, name))
 		if err != nil {
 			t.Fatal(err)

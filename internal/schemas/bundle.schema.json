@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/dotbrains/bellows/main/docs/schemas/bundle.schema.json",
+  "title": "Bellows diagnostic bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "config": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "workflows": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "count": { "type": "integer", "minimum": 0 },
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string" },
+              "name": { "type": "string" },
+              "jobs": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "required": ["path", "jobs"]
+          }
+        }
+      },
+      "required": ["count", "workflows"]
+    },
+    "doctor": { "$ref": "doctor.schema.json" },
+    "compat": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "policy": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "secrets": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "required": ["config", "workflows", "doctor", "compat", "policy", "secrets", "hooks"]
+}

@@ -33,7 +33,7 @@ func TestNewRootCmdRegistersMVPCommands(t *testing.T) {
 	for _, c := range root.Commands() {
 		cmds[c.Name()] = true
 	}
-	for _, want := range []string{"init", "run", "doctor", "cache", "config", "policy", "compat", "hooks", "migrate", "secrets", "release", "explain"} {
+	for _, want := range []string{"init", "run", "doctor", "cache", "config", "policy", "compat", "hooks", "migrate", "secrets", "release", "explain", "self-test"} {
 		if !cmds[want] {
 			t.Errorf("missing subcommand %q", want)
 		}
@@ -591,6 +591,17 @@ func TestConfigCommands(t *testing.T) {
 	if !strings.Contains(buf.String(), "Bellows doctor findings") {
 		t.Fatalf("unexpected schema output: %s", buf.String())
 	}
+
+	root = newRootCmd("test")
+	buf.Reset()
+	root.SetOut(buf)
+	root.SetArgs([]string{"config", "print-schema", "bundle"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "Bellows diagnostic bundle") {
+		t.Fatalf("unexpected bundle schema output: %s", buf.String())
+	}
 }
 
 func TestPolicyCommandReportsViolations(t *testing.T) {
@@ -790,6 +801,33 @@ func TestSampleRepoFixtureExplainsMigrationPlan(t *testing.T) {
 	if !sawBlacksmith || !sawSkippedPublish {
 		t.Fatalf("fixture plan missing expected migration details: %#v", executionPlan)
 	}
+}
+
+func TestSelfTestSupportsJSON(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflow(t, repo, "ci.yml", "ubuntu-latest")
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte("version: 1\ndefault_workflows:\n  - ci.yml\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "self-test", "--format", "json"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	var checks []struct {
+		Code string `json:"code"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &checks); err != nil {
+		t.Fatalf("invalid self-test JSON: %v\n%s", err, buf.String())
+	}
+	for _, check := range checks {
+		if check.Code == "workflow_discovery" {
+			return
+		}
+	}
+	t.Fatalf("missing workflow discovery check: %#v", checks)
 }
 
 func TestExamplesSmoke(t *testing.T) {

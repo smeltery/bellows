@@ -16,13 +16,16 @@ import (
 	"github.com/dotbrains/bellows/internal/changed"
 	"github.com/dotbrains/bellows/internal/compat"
 	"github.com/dotbrains/bellows/internal/config"
+	"github.com/dotbrains/bellows/internal/diagnostic"
 	"github.com/dotbrains/bellows/internal/doctor"
 	"github.com/dotbrains/bellows/internal/migrate"
 	"github.com/dotbrains/bellows/internal/plan"
 	"github.com/dotbrains/bellows/internal/policy"
 	"github.com/dotbrains/bellows/internal/precommit"
+	"github.com/dotbrains/bellows/internal/releasecheck"
 	"github.com/dotbrains/bellows/internal/schemas"
 	"github.com/dotbrains/bellows/internal/secrets"
+	"github.com/dotbrains/bellows/internal/selftest"
 	"github.com/dotbrains/bellows/internal/workflow"
 	"github.com/spf13/cobra"
 )
@@ -59,6 +62,7 @@ func newRootCmd(version string) *cobra.Command {
 	root.AddCommand(newSecretsCmd(opts))
 	root.AddCommand(newReleaseCmd(opts))
 	root.AddCommand(newExplainCmd(opts))
+	root.AddCommand(newSelfTestCmd(opts, version))
 	root.AddCommand(newCompletionCmd(root))
 
 	return root
@@ -325,70 +329,10 @@ func newDoctorBundleCmd(opts *cliOptions) *cobra.Command {
 				return err
 			}
 			hookStatus.Path = rel(root, hookStatus.Path)
-			bundle := diagnosticBundle{
-				Config: configSummary(cfg),
-				Workflows: workflowSummaries{
-					Count:     len(workflows),
-					Workflows: summarizeWorkflows(workflows),
-				},
-				Doctor:  doctor.Analyze(cfg, workflows),
-				Compat:  compat.Report(cfg, workflows),
-				Policy:  policy.Check(cfg, workflows),
-				Secrets: secrets.Audit(cfg, workflows),
-				Hooks:   hookStatus,
-			}
+			bundle := diagnostic.NewBundle(cfg, workflows, hookStatus)
 			return json.NewEncoder(cmd.OutOrStdout()).Encode(bundle)
 		},
 	}
-}
-
-type diagnosticBundle struct {
-	Config    map[string]any      `json:"config"`
-	Workflows workflowSummaries   `json:"workflows"`
-	Doctor    []doctor.Finding    `json:"doctor"`
-	Compat    []compat.Item       `json:"compat"`
-	Policy    []policy.Violation  `json:"policy"`
-	Secrets   []secrets.Reference `json:"secrets"`
-	Hooks     precommit.Status    `json:"hooks"`
-}
-
-type workflowSummaries struct {
-	Count     int               `json:"count"`
-	Workflows []workflowSummary `json:"workflows"`
-}
-
-type workflowSummary struct {
-	Path string   `json:"path"`
-	Name string   `json:"name,omitempty"`
-	Jobs []string `json:"jobs"`
-}
-
-func configSummary(cfg *config.Config) map[string]any {
-	runnerLabels := make([]string, 0, len(cfg.Runner.Map))
-	for label := range cfg.Runner.Map {
-		runnerLabels = append(runnerLabels, label)
-	}
-	sort.Strings(runnerLabels)
-	return map[string]any{
-		"version":           cfg.Version,
-		"default_workflows": cfg.DefaultWorkflows,
-		"event":             cfg.Event,
-		"runner_labels":     runnerLabels,
-		"secrets_mode":      cfg.Secrets.Mode,
-		"secrets_allow":     cfg.Secrets.Allow,
-		"skip_jobs":         cfg.Skip.Jobs,
-		"policy_cloud_jobs": cfg.Policy.CloudJobs,
-		"precommit_stage":   cfg.Precommit.Stage,
-		"precommit_mode":    cfg.Precommit.Mode,
-	}
-}
-
-func summarizeWorkflows(workflows []workflow.Workflow) []workflowSummary {
-	out := make([]workflowSummary, 0, len(workflows))
-	for _, wf := range workflows {
-		out = append(out, workflowSummary{Path: wf.Path, Name: wf.Name, Jobs: workflow.JobIDs(wf)})
-	}
-	return out
 }
 
 func doctorFixDiff(root string, cfg *config.Config) (string, error) {
@@ -664,42 +608,50 @@ func newReleaseCmd(opts *cliOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			steps := [][]string{
-				{"go", "test", "./..."},
-				{"golangci-lint", "run"},
-				{"actionlint"},
-				{"goreleaser", "check"},
-				{"go", "run", ".", "config", "validate"},
-				{"go", "run", ".", "policy"},
-				{"go", "run", ".", "compat"},
-				{"go", "run", ".", "run", "--list", "--estimate"},
-				{"goreleaser", "release", "--snapshot", "--clean", "--skip=publish"},
-			}
-			for _, step := range steps {
-				cmd.Printf("$ %s\n", strings.Join(step, " "))
-				if err := runPassthrough(root, step[0], step[1:]...); err != nil {
-					return err
-				}
-			}
-			archive := fmt.Sprintf("dist/bellows_%s_%s.tar.gz", goEnv("GOOS"), goEnv("GOARCH"))
-			smoke := filepath.Join(root, "dist", "smoke")
-			_ = os.RemoveAll(smoke)
-			if err := os.MkdirAll(smoke, 0o755); err != nil {
-				return err
-			}
-			if err := runPassthrough(root, "tar", "-xzf", archive, "-C", "dist/smoke"); err != nil {
-				return err
-			}
-			if err := runPassthrough(root, filepath.Join("dist", "smoke", "bellows"), "--version"); err != nil {
-				return err
-			}
-			smokeCompletion := exec.Command(filepath.Join("dist", "smoke", "bellows"), "completion", "bash")
-			smokeCompletion.Dir = root
-			smokeCompletion.Stdout = io.Discard
-			smokeCompletion.Stderr = os.Stderr
-			return smokeCompletion.Run()
+			return releasecheck.Runner{
+				Root:   root,
+				Stdout: cmd.OutOrStdout(),
+				Stderr: os.Stderr,
+				Stdin:  os.Stdin,
+			}.Run()
 		},
 	})
+	return cmd
+}
+
+func newSelfTestCmd(opts *cliOptions, version string) *cobra.Command {
+	var format string
+	cmd := &cobra.Command{
+		Use:   "self-test",
+		Short: "Check this Bellows install and repository",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			checks := selftest.Run(root, version)
+			switch format {
+			case "json":
+				return json.NewEncoder(cmd.OutOrStdout()).Encode(checks)
+			case "text":
+				for _, check := range checks {
+					cmd.Printf("[%s] %s\n", check.Level, check.Message)
+					if check.Suggestion != "" {
+						cmd.Printf("      suggestion: %s\n", check.Suggestion)
+					}
+				}
+			default:
+				return fmt.Errorf("unsupported format %q", format)
+			}
+			for _, check := range checks {
+				if check.Level == "error" {
+					return errors.New("self-test found errors")
+				}
+			}
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&format, "format", "text", "output format: text or json")
 	return cmd
 }
 
@@ -724,7 +676,7 @@ func newConfigCmd(opts *cliOptions) *cobra.Command {
 		},
 	})
 	cmd.AddCommand(&cobra.Command{
-		Use:   "print-schema [bellows|doctor|explain]",
+		Use:   "print-schema [bellows|doctor|explain|bundle]",
 		Short: "Print a Bellows JSON Schema",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -1084,6 +1036,8 @@ func printEmbeddedSchema(w io.Writer, name string) error {
 		data = schemas.Doctor
 	case "explain", "explain.schema.json":
 		data = schemas.Explain
+	case "bundle", "bundle.schema.json":
+		data = schemas.Bundle
 	default:
 		return fmt.Errorf("unknown schema %q", name)
 	}
@@ -1113,14 +1067,6 @@ func runPassthrough(dir, name string, args ...string) error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	return cmd.Run()
-}
-
-func goEnv(name string) string {
-	out, err := exec.Command("go", "env", name).Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
 }
 
 func selectedWorkflows(flag string, defaults []string) []string {

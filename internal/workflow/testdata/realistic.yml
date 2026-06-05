@@ -1,0 +1,26 @@
+name: Realistic CI
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, blacksmith-4vcpu-ubuntu-2404]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/go-build
+          key: go-${{ runner.os }}
+      - run: go test ./...
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v5
+      - run: ./deploy.sh
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: goreleaser/goreleaser-action@v7
