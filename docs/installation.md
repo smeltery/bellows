@@ -26,6 +26,15 @@ go install github.com/dotbrains/bellows@latest
 
 Make sure `$(go env GOPATH)/bin` is on your `PATH`.
 
+For private Dotbrains module access, configure Go to bypass the public proxy and
+checksum database for the organization:
+
+```sh
+go env -w GOPRIVATE=github.com/dotbrains/*
+go env -w GONOSUMDB=github.com/dotbrains/*
+GOPROXY=direct go install github.com/dotbrains/bellows@latest
+```
+
 ## Release Archives
 
 Download archives from GitHub Releases when a tagged release is available:
@@ -73,6 +82,20 @@ For zsh with Homebrew:
 
 ```sh
 bellows completion zsh > "$(brew --prefix)/share/zsh/site-functions/_bellows"
+```
+
+For bash with Homebrew:
+
+```sh
+mkdir -p "$(brew --prefix)/etc/bash_completion.d"
+bellows completion bash > "$(brew --prefix)/etc/bash_completion.d/bellows"
+```
+
+For fish:
+
+```sh
+mkdir -p ~/.config/fish/completions
+bellows completion fish > ~/.config/fish/completions/bellows.fish
 ```
 
 ## Optional: pre-commit

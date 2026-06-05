@@ -197,6 +197,61 @@ func SaveTo(cfg *Config, path string) error {
 	return nil
 }
 
+func UpgradeFile(path string, dryRun bool) ([]byte, bool, error) {
+	cfg, err := LoadFrom(path)
+	if err != nil {
+		return nil, false, err
+	}
+	if cfg.Version != Version {
+		return nil, false, fmt.Errorf("unsupported config version %d", cfg.Version)
+	}
+	current, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			data, err := Marshal(cfg)
+			if err != nil {
+				return nil, false, err
+			}
+			if !dryRun {
+				if err := SaveTo(cfg, path); err != nil {
+					return nil, false, err
+				}
+			}
+			return data, true, nil
+		}
+		return nil, false, fmt.Errorf("reading config: %w", err)
+	}
+	var doc yaml.Node
+	if err := yaml.Unmarshal(current, &doc); err != nil {
+		return nil, false, fmt.Errorf("parsing config %s: %w", path, err)
+	}
+	root := mappingRoot(&doc)
+	if root == nil {
+		data, err := Marshal(cfg)
+		if err != nil {
+			return nil, false, err
+		}
+		if !dryRun {
+			if err := SaveTo(cfg, path); err != nil {
+				return nil, false, err
+			}
+		}
+		return data, true, nil
+	}
+	upsertScalarTagged(root, "version", fmt.Sprintf("%d", Version), "!!int")
+	out, err := yaml.Marshal(&doc)
+	if err != nil {
+		return nil, false, fmt.Errorf("marshaling config: %w", err)
+	}
+	changed := string(out) != string(current)
+	if changed && !dryRun {
+		if err := os.WriteFile(path, out, 0o644); err != nil {
+			return nil, false, fmt.Errorf("writing config: %w", err)
+		}
+	}
+	return out, changed, nil
+}
+
 func PatchSafeFixes(path string, cfg *Config) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -240,6 +295,26 @@ func PatchSafeFixes(path string, cfg *Config) error {
 				continue
 			}
 			jobsNode.Content = append(jobsNode.Content, scalarNode(job))
+		}
+	}
+	if len(cfg.Precommit.Paths) > 0 {
+		precommitNode := ensureMapping(root, "precommit")
+		pathsNode := ensureSequence(precommitNode, "paths")
+		seen := map[string]bool{}
+		for _, item := range pathsNode.Content {
+			if item.Kind != yaml.MappingNode {
+				continue
+			}
+			if pattern := mappingValue(item, "pattern"); pattern != nil {
+				seen[pattern.Value] = true
+			}
+		}
+		for _, rule := range cfg.Precommit.Paths {
+			if seen[rule.Pattern] {
+				continue
+			}
+			pathsNode.Content = append(pathsNode.Content, pathRuleNode(rule))
+			seen[rule.Pattern] = true
 		}
 	}
 	out, err := yaml.Marshal(&doc)
@@ -327,6 +402,26 @@ func mappingValue(parent *yaml.Node, key string) *yaml.Node {
 
 func scalarNode(value string) *yaml.Node {
 	return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: value}
+}
+
+func pathRuleNode(rule PathRule) *yaml.Node {
+	node := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	node.Content = append(node.Content, scalarNode("pattern"), scalarNode(rule.Pattern))
+	if len(rule.Workflows) > 0 {
+		node.Content = append(node.Content, scalarNode("workflows"), stringSequence(rule.Workflows))
+	}
+	if len(rule.Jobs) > 0 {
+		node.Content = append(node.Content, scalarNode("jobs"), stringSequence(rule.Jobs))
+	}
+	return node
+}
+
+func stringSequence(values []string) *yaml.Node {
+	node := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+	for _, value := range values {
+		node.Content = append(node.Content, scalarNode(value))
+	}
+	return node
 }
 
 func (c *Config) ApplyDefaults() {

@@ -31,9 +31,11 @@ Inspect local workflow compatibility.
 bellows doctor
 bellows doctor --format json
 bellows doctor --format github
+bellows doctor --format sarif
 bellows doctor --strict
 bellows doctor --fix
 bellows doctor --fix --fix-dry-run
+bellows doctor --image-preflight
 bellows doctor bundle
 ```
 
@@ -57,6 +59,7 @@ integrations, automation, or agents that need stable diagnostic fields:
 ```
 
 GitHub output emits workflow annotations such as `::warning file=...::...`.
+SARIF output emits SARIF 2.1.0 for code scanning and security tooling.
 
 `--strict` fails on warnings as well as errors. Use it in local scripts when
 warnings should block a push.
@@ -65,11 +68,15 @@ warnings should block a push.
 
 - add mappings for known runner labels;
 - add cloud-like job ids such as `deploy`, `publish`, and `release` to
-  `skip.jobs`.
+  `skip.jobs`;
+- add inferred changed-file path rules when no path rules are configured.
 
 `--fix --fix-dry-run` prints the same fix plan, shows a unified diff preview,
 and reports diagnostics using the fixed in-memory config, but does not write
 `.bellows.yml`.
+
+`--image-preflight` checks whether mapped runner images are already available
+locally or pullable before invoking `act`.
 
 `doctor bundle` emits sanitized JSON for support and agent workflows. It includes
 config summaries, workflow/job summaries, doctor findings, compatibility,
@@ -155,6 +162,8 @@ bellows config print-schema
 bellows config print-schema doctor
 bellows config print-schema explain
 bellows config print-schema bundle
+bellows config upgrade
+bellows config upgrade --dry-run
 ```
 
 ## `bellows policy`
@@ -229,6 +238,8 @@ bellows release check
 
 The command runs tests, lint, workflow validation, GoReleaser validation,
 Bellows dogfood checks, a snapshot build, and a local release archive smoke.
+It also verifies that the release changelog would include at least one
+non-`docs:` and non-`chore:` commit since the previous tag.
 
 ## `bellows migrate github-actions`
 

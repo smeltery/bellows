@@ -36,6 +36,12 @@ func (r Runner) Run() error {
 			return err
 		}
 	}
+	if _, err := fmt.Fprintln(r.out(), "$ git changelog check"); err != nil {
+		return err
+	}
+	if err := r.checkChangelog(); err != nil {
+		return err
+	}
 	archive := fmt.Sprintf("dist/bellows_%s_%s.tar.gz", goEnv("GOOS"), goEnv("GOARCH"))
 	smoke := filepath.Join(r.Root, "dist", "smoke")
 	_ = os.RemoveAll(smoke)
@@ -53,6 +59,26 @@ func (r Runner) Run() error {
 	cmd.Stdout = io.Discard
 	cmd.Stderr = r.errOut()
 	return cmd.Run()
+}
+
+func (r Runner) checkChangelog() error {
+	previous, err := commandOutput(r.Root, "git", "describe", "--tags", "--abbrev=0", "HEAD^")
+	if err != nil {
+		return nil
+	}
+	previous = strings.TrimSpace(previous)
+	out, err := commandOutput(r.Root, "git", "log", "--format=%s", previous+"..HEAD")
+	if err != nil {
+		return fmt.Errorf("checking changelog commits: %w", err)
+	}
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "docs:") || strings.HasPrefix(line, "chore:") {
+			continue
+		}
+		return nil
+	}
+	return fmt.Errorf("release changelog would be empty; add a non-docs/non-chore commit before publishing")
 }
 
 func (r Runner) run(name string, args ...string) error {
@@ -91,4 +117,11 @@ func goEnv(name string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(out))
+}
+
+func commandOutput(dir, name string, args ...string) (string, error) {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	return string(out), err
 }

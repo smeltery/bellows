@@ -51,6 +51,13 @@ func Markdown() string {
 	for _, feature := range Features() {
 		fmt.Fprintf(&b, "| %s | `%s` | %s | %s |\n", feature.Status, feature.Feature, feature.Description, feature.Guidance)
 	}
+	b.WriteString("\n## Action Registry\n\n")
+	b.WriteString("This table is generated from Bellows action compatibility rules.\n\n")
+	b.WriteString("| Match | Status | Feature | Guidance |\n")
+	b.WriteString("|---|---|---|---|\n")
+	for _, rule := range ActionRules {
+		fmt.Fprintf(&b, "| `%s` | %s | `%s` | %s |\n", rule.Contains, rule.Status, rule.Feature, rule.Suggestion)
+	}
 	return b.String()
 }
 

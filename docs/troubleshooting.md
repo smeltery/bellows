@@ -15,6 +15,13 @@ bellows doctor
 bellows self-test
 ```
 
+Use runner image preflight when failures look like missing or stale local runner
+images:
+
+```sh
+bellows doctor --image-preflight
+```
+
 ## `docker is not reachable`
 
 Bellows found the Docker CLI but cannot reach the Docker daemon.

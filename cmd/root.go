@@ -23,6 +23,7 @@ import (
 	"github.com/dotbrains/bellows/internal/policy"
 	"github.com/dotbrains/bellows/internal/precommit"
 	"github.com/dotbrains/bellows/internal/releasecheck"
+	"github.com/dotbrains/bellows/internal/runner"
 	"github.com/dotbrains/bellows/internal/schemas"
 	"github.com/dotbrains/bellows/internal/secrets"
 	"github.com/dotbrains/bellows/internal/selftest"
@@ -220,6 +221,7 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 	var strict bool
 	var fix bool
 	var fixDryRun bool
+	var imagePreflight bool
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Inspect local GitHub Actions compatibility",
@@ -268,12 +270,19 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 			}
 			findings := doctor.Analyze(cfg, workflows)
 			findings = append(dependencyFindings(), findings...)
+			if imagePreflight {
+				findings = append(findings, runnerImageFindings(cfg, workflows)...)
+			}
 			if format == "json" {
 				if err := json.NewEncoder(cmd.OutOrStdout()).Encode(findings); err != nil {
 					return err
 				}
 			} else if format == "github" {
 				printGitHubFindings(cmd.OutOrStdout(), findings)
+			} else if format == "sarif" {
+				if err := json.NewEncoder(cmd.OutOrStdout()).Encode(sarifLog(findings)); err != nil {
+					return err
+				}
 			} else if format != "text" {
 				return fmt.Errorf("unsupported format %q", format)
 			}
@@ -299,10 +308,11 @@ func newDoctorCmd(opts *cliOptions) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&format, "format", "text", "output format: text, json, or github")
+	cmd.Flags().StringVar(&format, "format", "text", "output format: text, json, github, or sarif")
 	cmd.Flags().BoolVar(&strict, "strict", false, "fail when warnings are found")
 	cmd.Flags().BoolVar(&fix, "fix", false, "apply safe .bellows.yml fixes before reporting diagnostics")
 	cmd.Flags().BoolVar(&fixDryRun, "fix-dry-run", false, "preview safe .bellows.yml fixes without writing files")
+	cmd.Flags().BoolVar(&imagePreflight, "image-preflight", false, "check whether mapped runner images are available locally")
 	cmd.AddCommand(newDoctorBundleCmd(opts))
 	return cmd
 }
@@ -687,6 +697,34 @@ func newConfigCmd(opts *cliOptions) *cobra.Command {
 			return printEmbeddedSchema(cmd.OutOrStdout(), name)
 		},
 	})
+	var dryRun bool
+	upgrade := &cobra.Command{
+		Use:   "upgrade",
+		Short: "Upgrade .bellows.yml to the current schema version",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := repoRoot(opts.repoRoot)
+			if err != nil {
+				return err
+			}
+			path := filepath.Join(root, config.FileName)
+			data, changed, err := config.UpgradeFile(path, dryRun)
+			if err != nil {
+				return err
+			}
+			if dryRun {
+				_, err := cmd.OutOrStdout().Write(data)
+				return err
+			}
+			if changed {
+				cmd.Printf("upgraded %s\n", rel(root, path))
+			} else {
+				cmd.Println("config already current")
+			}
+			return nil
+		},
+	}
+	upgrade.Flags().BoolVar(&dryRun, "dry-run", false, "print upgraded config without writing")
+	cmd.AddCommand(upgrade)
 	return cmd
 }
 
@@ -903,6 +941,13 @@ func doctorFixes(cfg *config.Config, workflows []workflow.Workflow) ([]string, *
 		fixed.Skip.Jobs = append(fixed.Skip.Jobs, job)
 		messages = append(messages, fmt.Sprintf("added %s to skip.jobs", job))
 	}
+	if len(fixed.Precommit.Paths) == 0 {
+		migration := migrate.GitHubActions("", workflows)
+		if len(migration.Config.Precommit.Paths) > 0 {
+			fixed.Precommit.Paths = migration.Config.Precommit.Paths
+			messages = append(messages, "added inferred precommit path rules")
+		}
+	}
 	if len(messages) == 0 {
 		return []string{"no safe fixes available"}, &fixed, nil
 	}
@@ -1018,6 +1063,136 @@ func printGitHubPolicy(w io.Writer, violations []policy.Violation) {
 		}
 		fmt.Fprintf(w, "::%s file=%s,title=%s::%s\n", level, violation.Workflow, violation.Code, escapeAnnotation(violation.Message))
 	}
+}
+
+type sarif struct {
+	Version string     `json:"version"`
+	Schema  string     `json:"$schema"`
+	Runs    []sarifRun `json:"runs"`
+}
+
+type sarifRun struct {
+	Tool    sarifTool     `json:"tool"`
+	Results []sarifResult `json:"results"`
+}
+
+type sarifTool struct {
+	Driver sarifDriver `json:"driver"`
+}
+
+type sarifDriver struct {
+	Name           string      `json:"name"`
+	InformationURI string      `json:"informationUri"`
+	Rules          []sarifRule `json:"rules,omitempty"`
+}
+
+type sarifRule struct {
+	ID               string       `json:"id"`
+	Name             string       `json:"name"`
+	ShortDescription sarifMessage `json:"shortDescription"`
+}
+
+type sarifResult struct {
+	RuleID    string          `json:"ruleId"`
+	Level     string          `json:"level"`
+	Message   sarifMessage    `json:"message"`
+	Locations []sarifLocation `json:"locations,omitempty"`
+}
+
+type sarifMessage struct {
+	Text string `json:"text"`
+}
+
+type sarifLocation struct {
+	PhysicalLocation sarifPhysicalLocation `json:"physicalLocation"`
+}
+
+type sarifPhysicalLocation struct {
+	ArtifactLocation sarifArtifactLocation `json:"artifactLocation"`
+	Region           sarifRegion           `json:"region,omitempty"`
+}
+
+type sarifArtifactLocation struct {
+	URI string `json:"uri"`
+}
+
+type sarifRegion struct {
+	StartLine int `json:"startLine,omitempty"`
+}
+
+func sarifLog(findings []doctor.Finding) sarif {
+	ruleSeen := map[string]bool{}
+	var rules []sarifRule
+	var results []sarifResult
+	for _, finding := range findings {
+		if finding.Level != "warn" && finding.Level != "error" {
+			continue
+		}
+		if !ruleSeen[finding.Code] {
+			ruleSeen[finding.Code] = true
+			rules = append(rules, sarifRule{
+				ID:               finding.Code,
+				Name:             finding.Code,
+				ShortDescription: sarifMessage{Text: finding.Code},
+			})
+		}
+		result := sarifResult{
+			RuleID:  finding.Code,
+			Level:   sarifLevel(finding.Level),
+			Message: sarifMessage{Text: finding.Message},
+		}
+		if finding.Workflow != "" {
+			result.Locations = []sarifLocation{{
+				PhysicalLocation: sarifPhysicalLocation{
+					ArtifactLocation: sarifArtifactLocation{URI: finding.Workflow},
+					Region:           sarifRegion{StartLine: 1},
+				},
+			}}
+		}
+		results = append(results, result)
+	}
+	sort.Slice(rules, func(i, j int) bool { return rules[i].ID < rules[j].ID })
+	return sarif{
+		Version: "2.1.0",
+		Schema:  "https://json.schemastore.org/sarif-2.1.0.json",
+		Runs: []sarifRun{{
+			Tool: sarifTool{Driver: sarifDriver{
+				Name:           "bellows",
+				InformationURI: "https://github.com/dotbrains/bellows",
+				Rules:          rules,
+			}},
+			Results: results,
+		}},
+	}
+}
+
+func sarifLevel(level string) string {
+	if level == "error" {
+		return "error"
+	}
+	return "warning"
+}
+
+func runnerImageFindings(cfg *config.Config, workflows []workflow.Workflow) []doctor.Finding {
+	images := map[string]bool{}
+	for _, label := range workflow.Labels(workflows) {
+		if image, ok := runner.Resolve(label, cfg.Runner); ok {
+			images[image] = true
+		}
+	}
+	var findings []doctor.Finding
+	for image := range images {
+		if err := exec.Command("docker", "image", "inspect", image).Run(); err == nil {
+			findings = append(findings, doctor.NewFinding("ok", "runner_image_available", fmt.Sprintf("runner image %s is available locally", image)))
+			continue
+		}
+		if err := exec.Command("docker", "manifest", "inspect", image).Run(); err == nil {
+			findings = append(findings, doctor.NewFinding("ok", "runner_image_pullable", fmt.Sprintf("runner image %s is pullable", image)))
+			continue
+		}
+		findings = append(findings, doctor.NewFinding("warn", "runner_image_unavailable", fmt.Sprintf("runner image %s was not found locally or in the registry", image)))
+	}
+	return findings
 }
 
 func escapeAnnotation(value string) string {

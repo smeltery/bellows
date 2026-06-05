@@ -113,9 +113,11 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 | `bellows doctor` | Check Docker, act, workflow compatibility, secrets, and runner mappings. |
 | `bellows doctor --format json` | Emit stable diagnostics for automation and agents. |
 | `bellows doctor --format github` | Emit GitHub Actions annotations. |
+| `bellows doctor --format sarif` | Emit SARIF for code scanning integrations. |
 | `bellows doctor --strict` | Fail when warnings are present. |
 | `bellows doctor --fix` | Apply safe `.bellows.yml` fixes. |
 | `bellows doctor --fix --fix-dry-run` | Preview safe `.bellows.yml` fixes without writing. |
+| `bellows doctor --image-preflight` | Check mapped runner image availability. |
 | `bellows doctor bundle` | Emit sanitized diagnostics for support and agents. |
 | `bellows self-test` | Check this Bellows install and repository. |
 | `bellows explain --format json` | Emit the resolved local execution plan as JSON. |
@@ -126,6 +128,7 @@ See [docs/configuration.md](docs/configuration.md) for the supported fields.
 | `bellows secrets audit` | Show workflow secret references and local allowlist state. |
 | `bellows release check` | Run the local release-readiness suite. |
 | `bellows config validate` | Validate `.bellows.yml`. |
+| `bellows config upgrade` | Upgrade `.bellows.yml` to the current schema version. |
 | `bellows policy` | Check local execution policy. |
 | `bellows completion zsh` | Generate shell completions. |
 | `bellows cache prune` | Prune Docker builder cache used during local workflow runs. |

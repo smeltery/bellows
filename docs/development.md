@@ -47,6 +47,8 @@ The scheduled release check pins tool versions in
 Keep local Flox tooling and the workflow pins aligned when changing release
 checks.
 
+The release and release dry-run workflows also pin GoReleaser to `v2.16.0`.
+
 ## Local Release Check
 
 Use GoReleaser snapshot mode to verify archives and the Homebrew cask without

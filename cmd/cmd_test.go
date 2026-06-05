@@ -304,6 +304,32 @@ func TestDoctorFixDryRunDoesNotWriteConfig(t *testing.T) {
 	}
 }
 
+func TestDoctorFixInfersPrecommitPathRules(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - run: go test ./services/api/...
+`)
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte("version: 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "doctor", "--fix"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	configYAML := readFile(t, filepath.Join(repo, ".bellows.yml"))
+	if !strings.Contains(configYAML, "pattern: services/api/**") {
+		t.Fatalf("doctor --fix did not infer path rules:\n%s", configYAML)
+	}
+}
+
 func TestDoctorCommandSupportsJSON(t *testing.T) {
 	repo := t.TempDir()
 	writeWorkflow(t, repo, "ci.yml", "blacksmith-4vcpu-ubuntu-2204")
@@ -352,6 +378,40 @@ jobs:
 	}
 	if !strings.Contains(buf.String(), "::warning file=.github/workflows/ci.yml,title=upload_artifact::") {
 		t.Fatalf("missing GitHub annotation:\n%s", buf.String())
+	}
+}
+
+func TestDoctorCommandSupportsSARIF(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflowBody(t, repo, "ci.yml", `name: CI
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/upload-artifact@v5
+`)
+
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "doctor", "--format", "sarif"})
+
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	var log struct {
+		Version string `json:"version"`
+		Runs    []struct {
+			Results []struct {
+				RuleID string `json:"ruleId"`
+			} `json:"results"`
+		} `json:"runs"`
+	}
+	if err := json.Unmarshal(buf.Bytes(), &log); err != nil {
+		t.Fatalf("invalid SARIF JSON: %v\n%s", err, buf.String())
+	}
+	if log.Version != "2.1.0" || len(log.Runs) != 1 || len(log.Runs[0].Results) == 0 {
+		t.Fatalf("unexpected SARIF output: %#v", log)
 	}
 }
 
@@ -601,6 +661,72 @@ func TestConfigCommands(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "Bellows diagnostic bundle") {
 		t.Fatalf("unexpected bundle schema output: %s", buf.String())
+	}
+}
+
+func TestConfigUpgrade(t *testing.T) {
+	repo := t.TempDir()
+	path := filepath.Join(repo, ".bellows.yml")
+	if err := os.WriteFile(path, []byte("event: push\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	root := newRootCmd("test")
+	buf := &bytes.Buffer{}
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "config", "upgrade", "--dry-run"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "version: 1") {
+		t.Fatalf("upgrade dry-run missing version:\n%s", buf.String())
+	}
+	if strings.Contains(readFile(t, path), "version: 1") {
+		t.Fatal("upgrade dry-run wrote config")
+	}
+
+	root = newRootCmd("test")
+	buf.Reset()
+	root.SetOut(buf)
+	root.SetArgs([]string{"--repo", repo, "config", "upgrade"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(readFile(t, path), "version: 1") {
+		t.Fatal("upgrade did not write current version")
+	}
+}
+
+func TestMachineOutputsMatchPublishedSchemaShapes(t *testing.T) {
+	repo := t.TempDir()
+	writeWorkflow(t, repo, "ci.yml", "ubuntu-latest")
+	if err := os.WriteFile(filepath.Join(repo, ".bellows.yml"), []byte("version: 1\ndefault_workflows:\n  - ci.yml\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"doctor", []string{"doctor", "--format", "json"}, "level"},
+		{"explain", []string{"explain", "--format", "json"}, "workflows"},
+		{"bundle", []string{"doctor", "bundle"}, "config"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := newRootCmd("test")
+			buf := &bytes.Buffer{}
+			root.SetOut(buf)
+			root.SetArgs(append([]string{"--repo", repo}, tc.args...))
+			if err := root.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			var output any
+			if err := json.Unmarshal(buf.Bytes(), &output); err != nil {
+				t.Fatalf("invalid JSON: %v\n%s", err, buf.String())
+			}
+			if !strings.Contains(buf.String(), tc.want) {
+				t.Fatalf("output does not include schema marker %q:\n%s", tc.want, buf.String())
+			}
+		})
 	}
 }
 

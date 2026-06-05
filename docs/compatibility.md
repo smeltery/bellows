@@ -15,3 +15,14 @@ This table is generated from Bellows compatibility classifications.
 | unsupported | `environment-protection` | GitHub deployment environments and approvals | Keep protected deployments in cloud CI. |
 | unsupported | `cloud-credentials` | Cloud credential setup actions such as AWS OIDC | Skip these jobs locally unless a local credential path is explicit. |
 | unsupported | `release-publish` | Release publishing actions | Add release jobs to `skip.jobs`. |
+
+## Action Registry
+
+This table is generated from Bellows action compatibility rules.
+
+| Match | Status | Feature | Guidance |
+|---|---|---|---|
+| `docker/login-action` | partial | `registry-login` | skip publish jobs or provide local registry credentials |
+| `github-script` | partial | `github-api` | guard the step for local runs or provide a scoped token |
+| `softprops/action-gh-release` | unsupported | `release-publish` | add this job to skip.jobs |
+| `goreleaser/goreleaser-action` | unsupported | `release-publish` | add this job to skip.jobs |

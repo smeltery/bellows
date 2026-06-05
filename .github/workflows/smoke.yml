@@ -28,6 +28,24 @@ jobs:
           bellows --version
           bellows --help
 
+  go-install-private-mode:
+    runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/dotbrains/*
+      GONOSUMDB: github.com/dotbrains/*
+      TAG: ${{ github.event.release.tag_name || inputs.tag || 'latest' }}
+    steps:
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Install Bellows with private module settings
+        run: GOPROXY=direct go install github.com/dotbrains/bellows@"$TAG"
+
+      - name: Check installed binary
+        run: bellows --version
+
   homebrew-install:
     runs-on: macos-latest
     env:
