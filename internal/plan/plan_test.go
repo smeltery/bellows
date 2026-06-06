@@ -37,8 +37,8 @@ func TestBuildResolvesMatrixRunnersAndSkips(t *testing.T) {
 		t.Fatalf("deploy should be first sorted job and skipped: %#v", got.Workflows[0].Jobs)
 	}
 	wantImages := []string{
-		"ubuntu-latest=catthehacker/ubuntu:act-22.04",
-		"macos-latest=catthehacker/ubuntu:act-22.04",
+		"ubuntu-latest=ghcr.io/dotbrains/kiln:ubuntu-22.04",
+		"macos-latest=ghcr.io/dotbrains/kiln:ubuntu-22.04",
 	}
 	if !reflect.DeepEqual(got.Workflows[0].Jobs[1].RunnerImages, wantImages) {
 		t.Fatalf("RunnerImages = %#v, want %#v", got.Workflows[0].Jobs[1].RunnerImages, wantImages)

@@ -36,7 +36,7 @@ func TestAnalyzeReportsBlacksmithMappingAndCloudWarnings(t *testing.T) {
 	}
 
 	findings := Analyze(config.DefaultConfig(), []workflow.Workflow{wf})
-	assertFinding(t, findings, "ok", "Blacksmith runner blacksmith-4vcpu-ubuntu-2204 maps to catthehacker/ubuntu:act-22.04")
+	assertFinding(t, findings, "ok", "Blacksmith runner blacksmith-4vcpu-ubuntu-2204 maps to ghcr.io/dotbrains/kiln:ubuntu-22.04")
 	assertFinding(t, findings, "warn", "local OIDC is not emulated")
 	assertFinding(t, findings, "warn", "uses deployment environment production")
 	assertFinding(t, findings, "warn", "uploads artifacts")
@@ -101,7 +101,7 @@ func TestAnalyzeReportsMacOSCompatibilityMapping(t *testing.T) {
 	}
 
 	findings := Analyze(config.DefaultConfig(), []workflow.Workflow{wf})
-	assertFinding(t, findings, "ok", "macOS runner compatibility mapping macos-latest maps to catthehacker/ubuntu:act-22.04")
+	assertFinding(t, findings, "ok", "macOS runner compatibility mapping macos-latest maps to ghcr.io/dotbrains/kiln:ubuntu-22.04")
 }
 
 func assertFinding(t *testing.T, findings []Finding, level, message string) {

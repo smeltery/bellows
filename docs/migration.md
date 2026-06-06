@@ -192,7 +192,7 @@ skip:
 ```yaml
 runner:
   map:
-    custom-ubuntu-runner: catthehacker/ubuntu:act-22.04
+    custom-ubuntu-runner: ghcr.io/dotbrains/kiln:ubuntu-22.04
 ```
 
 ### Allow a Secret

@@ -85,9 +85,9 @@ default_workflows:
 event: pull_request
 runner:
   map:
-    ubuntu-latest: catthehacker/ubuntu:act-22.04
-    macos-latest: catthehacker/ubuntu:act-22.04
-    blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
+    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    macos-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
 precommit:
   stage: pre-push
   mode: full
@@ -170,16 +170,16 @@ Bellows maps Blacksmith runner labels to local act images so workflow files can 
 ```yaml
 runner:
   map:
-    blacksmith-2vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-8vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-16vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-32vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-2vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
-    blacksmith-4vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
-    blacksmith-8vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
-    blacksmith-16vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
-    blacksmith-32vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
+    blacksmith-2vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-8vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-16vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-32vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-2vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    blacksmith-4vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    blacksmith-8vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    blacksmith-16vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    blacksmith-32vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
 ```
 
 Run `bellows doctor` to see which labels are mapped locally. See [docs/blacksmith.md](docs/blacksmith.md).
