@@ -141,7 +141,10 @@ not a universal default; some actions work better with the host architecture.
 
 ### `runner`
 
-Maps GitHub Actions runner labels to local Docker images.
+Maps GitHub Actions runner labels to local Docker images. Defaults point at
+[kiln](https://github.com/dotbrains/kiln), a hardened, glibc-native Wolfi `act`
+runner published at the public `ghcr.io/dotbrains/kiln` package. Override these
+values to use any other act-compatible image.
 
 ```yaml
 runner:
