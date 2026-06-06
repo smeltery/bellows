@@ -6,6 +6,8 @@
 
 Bellows runs existing GitHub Actions workflows locally through [act](https://github.com/nektos/act) and Docker. It is designed for repositories that want a fast pre-push check, including teams migrating workflows that use Blacksmith runner labels.
 
+By default, Bellows maps runner labels to [kiln](https://github.com/dotbrains/kiln), a hardened, glibc-native [Wolfi](https://github.com/wolfi-dev) `act` runner image published at `ghcr.io/dotbrains/kiln`. Override `runner.map` in `.bellows.yml` to use any other act-compatible image.
+
 ```mermaid
 flowchart LR
     developer[Developer] --> hook[pre-push hook]
@@ -93,6 +95,8 @@ precommit:
   mode: full
   timeout_seconds: 900
 ```
+
+The default `runner.map` points at [`ghcr.io/dotbrains/kiln`](https://github.com/dotbrains/kiln) tags (`ubuntu-22.04`, `ubuntu-24.04`). The package is public, so `act` pulls it without authentication.
 
 See [docs/configuration.md](docs/configuration.md) for the supported fields.
 
