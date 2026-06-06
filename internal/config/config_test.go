@@ -16,13 +16,13 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Event != "pull_request" {
 		t.Errorf("Event = %q, want pull_request", cfg.Event)
 	}
-	if got := cfg.Runner.Map["ubuntu-latest"]; got != "catthehacker/ubuntu:act-22.04" {
+	if got := cfg.Runner.Map["ubuntu-latest"]; got != "ghcr.io/dotbrains/kiln:ubuntu-22.04" {
 		t.Errorf("ubuntu-latest map = %q", got)
 	}
 	if _, ok := cfg.Runner.Map["blacksmith-4vcpu-ubuntu-2204"]; ok {
 		t.Error("default config should stay minimal until Blacksmith labels are detected")
 	}
-	if got := cfg.Runner.Map["macos-latest"]; got != "catthehacker/ubuntu:act-22.04" {
+	if got := cfg.Runner.Map["macos-latest"]; got != "ghcr.io/dotbrains/kiln:ubuntu-22.04" {
 		t.Errorf("macos-latest map = %q", got)
 	}
 }
@@ -44,7 +44,7 @@ func TestSaveToAndLoadFrom(t *testing.T) {
 	cfg.Event = "push"
 	cfg.DefaultWorkflows = []string{"ci.yml", ".github/workflows/release.yml"}
 	cfg.Docker.Platform = "linux/amd64"
-	cfg.Runner.Map["blacksmith-4vcpu-ubuntu-2204"] = "catthehacker/ubuntu:act-22.04"
+	cfg.Runner.Map["blacksmith-4vcpu-ubuntu-2204"] = "ghcr.io/dotbrains/kiln:ubuntu-22.04"
 	cfg.Secrets.Mode = "env"
 	cfg.Secrets.Allow = []string{"GITHUB_TOKEN", "NPM_TOKEN"}
 	cfg.Skip.Jobs = []string{"deploy"}
@@ -82,7 +82,7 @@ func TestLoadFrom_PartialConfigKeepsDefaults(t *testing.T) {
 	if cfg.Version != 1 {
 		t.Errorf("Version = %d, want default 1", cfg.Version)
 	}
-	if got := cfg.Runner.Map["ubuntu-latest"]; got != "catthehacker/ubuntu:act-22.04" {
+	if got := cfg.Runner.Map["ubuntu-latest"]; got != "ghcr.io/dotbrains/kiln:ubuntu-22.04" {
 		t.Errorf("ubuntu-latest map = %q, want default image", got)
 	}
 }
@@ -92,10 +92,10 @@ func TestMinimalAddsDetectedRunnerMappings(t *testing.T) {
 	if !reflect.DeepEqual(cfg.DefaultWorkflows, []string{"ci.yml"}) {
 		t.Fatalf("DefaultWorkflows = %#v", cfg.DefaultWorkflows)
 	}
-	if got := cfg.Runner.Map["blacksmith-4vcpu-ubuntu-2204"]; got != "catthehacker/ubuntu:act-22.04" {
+	if got := cfg.Runner.Map["blacksmith-4vcpu-ubuntu-2204"]; got != "ghcr.io/dotbrains/kiln:ubuntu-22.04" {
 		t.Errorf("blacksmith map = %q", got)
 	}
-	if got := cfg.Runner.Map["macos-latest"]; got != "catthehacker/ubuntu:act-22.04" {
+	if got := cfg.Runner.Map["macos-latest"]; got != "ghcr.io/dotbrains/kiln:ubuntu-22.04" {
 		t.Errorf("macos map = %q", got)
 	}
 	if !reflect.DeepEqual(cfg.Skip.Jobs, []string{"deploy"}) {
@@ -121,7 +121,7 @@ func TestSaveTo_WritesExpectedConfigYAML(t *testing.T) {
 		"- ci.yml",
 		"event: pull_request",
 		"runner:",
-		"ubuntu-latest: catthehacker/ubuntu:act-22.04",
+		"ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("saved YAML missing %q:\n%s", want, out)
@@ -152,7 +152,7 @@ func TestPatchSafeFixesPreservesComments(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := DefaultConfig()
-	cfg.Runner.Map["blacksmith-4vcpu-ubuntu-2404"] = "catthehacker/ubuntu:act-24.04"
+	cfg.Runner.Map["blacksmith-4vcpu-ubuntu-2404"] = "ghcr.io/dotbrains/kiln:ubuntu-24.04"
 	cfg.Skip.Jobs = []string{"deploy"}
 	if err := PatchSafeFixes(path, cfg); err != nil {
 		t.Fatal(err)
@@ -160,7 +160,7 @@ func TestPatchSafeFixesPreservesComments(t *testing.T) {
 	out := readConfig(t, path)
 	for _, want := range []string{
 		"# team note",
-		"blacksmith-4vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04",
+		"blacksmith-4vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04",
 		"- deploy",
 	} {
 		if !strings.Contains(out, want) {

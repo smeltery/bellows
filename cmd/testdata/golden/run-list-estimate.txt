@@ -1,6 +1,6 @@
 event: pull_request
 default workflows: ci.yml
 .github/workflows/ci.yml
-  [skip] deploy (ubuntu-latest=catthehacker/ubuntu:act-22.04)
-  [run] test (ubuntu-latest=catthehacker/ubuntu:act-22.04)
+  [skip] deploy (ubuntu-latest=ghcr.io/dotbrains/kiln:ubuntu-22.04)
+  [run] test (ubuntu-latest=ghcr.io/dotbrains/kiln:ubuntu-22.04)
 estimate: 1 runnable jobs, 1 skipped jobs, 1 avoided cloud jobs

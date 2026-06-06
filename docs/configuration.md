@@ -20,17 +20,17 @@ docker:
   pull: missing
 
 runner:
-  default_image: catthehacker/ubuntu:act-22.04
+  default_image: ghcr.io/dotbrains/kiln:ubuntu-22.04
   map:
-    ubuntu-latest: catthehacker/ubuntu:act-22.04
-    ubuntu-22.04: catthehacker/ubuntu:act-22.04
-    macos-latest: catthehacker/ubuntu:act-22.04
-    blacksmith-2vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-8vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-16vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-32vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-4vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
+    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    ubuntu-22.04: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    macos-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-2vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-8vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-16vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-32vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
 
 secrets:
   mode: env
@@ -145,10 +145,10 @@ Maps GitHub Actions runner labels to local Docker images.
 
 ```yaml
 runner:
-  default_image: catthehacker/ubuntu:act-22.04
+  default_image: ghcr.io/dotbrains/kiln:ubuntu-22.04
   map:
-    ubuntu-latest: catthehacker/ubuntu:act-22.04
-    macos-latest: catthehacker/ubuntu:act-22.04
+    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    macos-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
 ```
 
 If a workflow uses an unmapped `runs-on` label, Bellows:
@@ -237,12 +237,12 @@ default_workflows:
 event: pull_request
 runner:
   map:
-    ubuntu-latest: catthehacker/ubuntu:act-22.04
+    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
 ```
 
 Add Blacksmith mappings only when Blacksmith runner labels are detected.
 Known Blacksmith Ubuntu 22.04 and 24.04 labels from 2 to 32 vCPU are mapped to
-the closest `catthehacker/ubuntu` act image.
+the matching `ghcr.io/dotbrains/kiln` act image.
 
 macOS runner labels may be mapped to Ubuntu-based act images for local
 compatibility. This catches some cross-platform failures locally but does not

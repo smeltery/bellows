@@ -18,7 +18,7 @@ Bellows maps the runner label to a local Docker image:
 ```yaml
 runner:
   map:
-    blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
+    blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
 ```
 
 ## Default Mappings
@@ -28,16 +28,16 @@ Bellows recognizes common labels:
 ```yaml
 runner:
   map:
-    blacksmith-2vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-8vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-16vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-32vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
-    blacksmith-2vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
-    blacksmith-4vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
-    blacksmith-8vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
-    blacksmith-16vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
-    blacksmith-32vcpu-ubuntu-2404: catthehacker/ubuntu:act-24.04
+    blacksmith-2vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-8vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-16vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-32vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-2vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    blacksmith-4vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    blacksmith-8vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    blacksmith-16vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    blacksmith-32vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
 ```
 
 If an image tag is unavailable, Bellows uses the closest stable `act` image and reports
@@ -49,7 +49,7 @@ the substitution.
 
 ```text
 Found Blacksmith runner: blacksmith-4vcpu-ubuntu-2204
-Local image: catthehacker/ubuntu:act-22.04
+Local image: ghcr.io/dotbrains/kiln:ubuntu-22.04
 Status: mapped
 ```
 

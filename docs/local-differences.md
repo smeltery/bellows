@@ -17,8 +17,8 @@ Examples:
 ```yaml
 runner:
   map:
-    ubuntu-latest: catthehacker/ubuntu:act-22.04
-    blacksmith-4vcpu-ubuntu-2204: catthehacker/ubuntu:act-22.04
+    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
 ```
 
 macOS labels can map to Ubuntu-based act images for local compatibility checks,
