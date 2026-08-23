@@ -13,7 +13,7 @@
             "ubuntu-latest"
           ],
           "runner_images": [
-            "ubuntu-latest=ghcr.io/dotbrains/kiln:ubuntu-22.04"
+            "ubuntu-latest=ghcr.io/smeltery/kiln:ubuntu-22.04"
           ],
           "skipped": true
         },
@@ -23,8 +23,8 @@
             "${{ matrix.os }}"
           ],
           "runner_images": [
-            "ubuntu-latest=ghcr.io/dotbrains/kiln:ubuntu-22.04",
-            "macos-latest=ghcr.io/dotbrains/kiln:ubuntu-22.04"
+            "ubuntu-latest=ghcr.io/smeltery/kiln:ubuntu-22.04",
+            "macos-latest=ghcr.io/smeltery/kiln:ubuntu-22.04"
           ],
           "skipped": false
         }

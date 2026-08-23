@@ -9,11 +9,11 @@ builds:
 
 homebrew_casks:
   - repository:
-      owner: dotbrains
+      owner: smeltery
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     name: bellows
-    homepage: https://github.com/dotbrains/bellows
+    homepage: https://github.com/smeltery/bellows
     description: "Run GitHub Actions locally before you push"
     license: "PolyForm Shield 1.0.0"
     binaries: [bellows]

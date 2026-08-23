@@ -3,9 +3,9 @@ package policy
 import (
 	"fmt"
 
-	"github.com/dotbrains/bellows/internal/config"
-	"github.com/dotbrains/bellows/internal/doctor"
-	"github.com/dotbrains/bellows/internal/workflow"
+	"github.com/smeltery/bellows/internal/config"
+	"github.com/smeltery/bellows/internal/doctor"
+	"github.com/smeltery/bellows/internal/workflow"
 )
 
 type Violation struct {

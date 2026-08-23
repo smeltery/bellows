@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dotbrains/bellows/internal/plan"
-	"github.com/dotbrains/bellows/internal/precommit"
+	"github.com/smeltery/bellows/internal/plan"
+	"github.com/smeltery/bellows/internal/precommit"
 )
 
 func TestExecuteVersion(t *testing.T) {
@@ -91,8 +91,8 @@ jobs:
 	for _, want := range []string{
 		"default_workflows:",
 		"- ci.yml",
-		"blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04",
-		"ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04",
+		"blacksmith-4vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04",
+		"ubuntu-latest: ghcr.io/smeltery/kiln:ubuntu-22.04",
 		"- deploy",
 	} {
 		if !strings.Contains(configYAML, want) {
@@ -137,7 +137,7 @@ func TestInitDryRunPrintsConfigWithoutWriting(t *testing.T) {
 	if err := root.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(buf.String(), "blacksmith-16vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04") {
+	if !strings.Contains(buf.String(), "blacksmith-16vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04") {
 		t.Fatalf("dry-run output missing Blacksmith mapping:\n%s", buf.String())
 	}
 	if _, err := os.Stat(filepath.Join(repo, ".bellows.yml")); !os.IsNotExist(err) {
@@ -157,7 +157,7 @@ func TestDoctorCommandReportsBlacksmithMapping(t *testing.T) {
 	if err := root.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(buf.String(), "Blacksmith runner blacksmith-4vcpu-ubuntu-2204 maps to ghcr.io/dotbrains/kiln:ubuntu-22.04") {
+	if !strings.Contains(buf.String(), "Blacksmith runner blacksmith-4vcpu-ubuntu-2204 maps to ghcr.io/smeltery/kiln:ubuntu-22.04") {
 		t.Errorf("doctor output missing Blacksmith mapping:\n%s", buf.String())
 	}
 }
@@ -209,7 +209,7 @@ jobs:
 	configYAML := readFile(t, filepath.Join(repo, ".bellows.yml"))
 	for _, want := range []string{
 		"# keep me",
-		"blacksmith-16vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04",
+		"blacksmith-16vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04",
 		"- publish",
 	} {
 		if !strings.Contains(configYAML, want) {
@@ -917,7 +917,7 @@ func TestSampleRepoFixtureExplainsMigrationPlan(t *testing.T) {
 	var sawBlacksmith bool
 	var sawSkippedPublish bool
 	for _, job := range executionPlan.Workflows[0].Jobs {
-		if job.ID == "test" && strings.Join(job.RunnerImages, ",") == "ubuntu-latest=ghcr.io/dotbrains/kiln:ubuntu-22.04,blacksmith-4vcpu-ubuntu-2404=ghcr.io/dotbrains/kiln:ubuntu-24.04" {
+		if job.ID == "test" && strings.Join(job.RunnerImages, ",") == "ubuntu-latest=ghcr.io/smeltery/kiln:ubuntu-22.04,blacksmith-4vcpu-ubuntu-2404=ghcr.io/smeltery/kiln:ubuntu-24.04" {
 			sawBlacksmith = true
 		}
 		if job.ID == "publish" && job.Skipped {

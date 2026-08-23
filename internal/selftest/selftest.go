@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/dotbrains/bellows/internal/config"
-	"github.com/dotbrains/bellows/internal/plan"
-	"github.com/dotbrains/bellows/internal/workflow"
+	"github.com/smeltery/bellows/internal/config"
+	"github.com/smeltery/bellows/internal/plan"
+	"github.com/smeltery/bellows/internal/workflow"
 )
 
 type Check struct {

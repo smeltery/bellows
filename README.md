@@ -1,12 +1,12 @@
 # bellows 🔥🪨
 
-[![CI](https://github.com/dotbrains/bellows/actions/workflows/ci.yml/badge.svg)](https://github.com/dotbrains/bellows/actions/workflows/ci.yml)
-[![Release](https://github.com/dotbrains/bellows/actions/workflows/release.yml/badge.svg)](https://github.com/dotbrains/bellows/actions/workflows/release.yml)
+[![CI](https://github.com/smeltery/bellows/actions/workflows/ci.yml/badge.svg)](https://github.com/smeltery/bellows/actions/workflows/ci.yml)
+[![Release](https://github.com/smeltery/bellows/actions/workflows/release.yml/badge.svg)](https://github.com/smeltery/bellows/actions/workflows/release.yml)
 [![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/License-PolyForm%20Shield%201.0.0-blue.svg)](https://polyformproject.org/licenses/shield/1.0.0/)
 
 Bellows runs existing GitHub Actions workflows locally through [act](https://github.com/nektos/act) and Docker. It is designed for repositories that want a fast pre-push check, including teams migrating workflows that use Blacksmith runner labels.
 
-By default, Bellows maps runner labels to [kiln](https://github.com/dotbrains/kiln), a hardened, glibc-native [Wolfi](https://github.com/wolfi-dev) `act` runner image published at `ghcr.io/dotbrains/kiln`. Override `runner.map` in `.bellows.yml` to use any other act-compatible image.
+By default, Bellows maps runner labels to [kiln](https://github.com/smeltery/kiln), a hardened, glibc-native [Wolfi](https://github.com/wolfi-dev) `act` runner image published at `ghcr.io/smeltery/kiln`. Override `runner.map` in `.bellows.yml` to use any other act-compatible image.
 
 ```mermaid
 flowchart LR
@@ -27,7 +27,7 @@ flowchart LR
 ## Quick Start
 
 ```sh
-go install github.com/dotbrains/bellows@latest
+go install github.com/smeltery/bellows@latest
 
 cd your-repo
 bellows migrate github-actions
@@ -87,16 +87,16 @@ default_workflows:
 event: pull_request
 runner:
   map:
-    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    macos-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    ubuntu-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
+    macos-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
 precommit:
   stage: pre-push
   mode: full
   timeout_seconds: 900
 ```
 
-The default `runner.map` points at [`ghcr.io/dotbrains/kiln`](https://github.com/dotbrains/kiln) tags (`ubuntu-22.04`, `ubuntu-24.04`). The package is public, so `act` pulls it without authentication.
+The default `runner.map` points at [`ghcr.io/smeltery/kiln`](https://github.com/smeltery/kiln) tags (`ubuntu-22.04`, `ubuntu-24.04`). The package is public, so `act` pulls it without authentication.
 
 See [docs/configuration.md](docs/configuration.md) for the supported fields.
 
@@ -174,16 +174,16 @@ Bellows maps Blacksmith runner labels to local act images so workflow files can 
 ```yaml
 runner:
   map:
-    blacksmith-2vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-8vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-16vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-32vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-2vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
-    blacksmith-4vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
-    blacksmith-8vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
-    blacksmith-16vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
-    blacksmith-32vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    blacksmith-2vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-8vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-16vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-32vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-2vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04
+    blacksmith-4vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04
+    blacksmith-8vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04
+    blacksmith-16vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04
+    blacksmith-32vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04
 ```
 
 Run `bellows doctor` to see which labels are mapped locally. See [docs/blacksmith.md](docs/blacksmith.md).

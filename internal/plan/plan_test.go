@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dotbrains/bellows/internal/config"
-	"github.com/dotbrains/bellows/internal/workflow"
+	"github.com/smeltery/bellows/internal/config"
+	"github.com/smeltery/bellows/internal/workflow"
 )
 
 func TestBuildResolvesMatrixRunnersAndSkips(t *testing.T) {
@@ -37,8 +37,8 @@ func TestBuildResolvesMatrixRunnersAndSkips(t *testing.T) {
 		t.Fatalf("deploy should be first sorted job and skipped: %#v", got.Workflows[0].Jobs)
 	}
 	wantImages := []string{
-		"ubuntu-latest=ghcr.io/dotbrains/kiln:ubuntu-22.04",
-		"macos-latest=ghcr.io/dotbrains/kiln:ubuntu-22.04",
+		"ubuntu-latest=ghcr.io/smeltery/kiln:ubuntu-22.04",
+		"macos-latest=ghcr.io/smeltery/kiln:ubuntu-22.04",
 	}
 	if !reflect.DeepEqual(got.Workflows[0].Jobs[1].RunnerImages, wantImages) {
 		t.Fatalf("RunnerImages = %#v, want %#v", got.Workflows[0].Jobs[1].RunnerImages, wantImages)

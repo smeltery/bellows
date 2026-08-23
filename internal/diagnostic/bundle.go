@@ -3,13 +3,13 @@ package diagnostic
 import (
 	"sort"
 
-	"github.com/dotbrains/bellows/internal/compat"
-	"github.com/dotbrains/bellows/internal/config"
-	"github.com/dotbrains/bellows/internal/doctor"
-	"github.com/dotbrains/bellows/internal/policy"
-	"github.com/dotbrains/bellows/internal/precommit"
-	"github.com/dotbrains/bellows/internal/secrets"
-	"github.com/dotbrains/bellows/internal/workflow"
+	"github.com/smeltery/bellows/internal/compat"
+	"github.com/smeltery/bellows/internal/config"
+	"github.com/smeltery/bellows/internal/doctor"
+	"github.com/smeltery/bellows/internal/policy"
+	"github.com/smeltery/bellows/internal/precommit"
+	"github.com/smeltery/bellows/internal/secrets"
+	"github.com/smeltery/bellows/internal/workflow"
 )
 
 type Bundle struct {

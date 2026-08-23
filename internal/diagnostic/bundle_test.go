@@ -3,9 +3,9 @@ package diagnostic
 import (
 	"testing"
 
-	"github.com/dotbrains/bellows/internal/config"
-	"github.com/dotbrains/bellows/internal/precommit"
-	"github.com/dotbrains/bellows/internal/workflow"
+	"github.com/smeltery/bellows/internal/config"
+	"github.com/smeltery/bellows/internal/precommit"
+	"github.com/smeltery/bellows/internal/workflow"
 )
 
 func TestNewBundleSummarizesConfigAndWorkflows(t *testing.T) {

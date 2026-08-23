@@ -4,11 +4,11 @@ Bellows is distributed as a single binary.
 
 ## Homebrew
 
-Homebrew distribution is available from the Dotbrains tap.
+Homebrew distribution is available from the Smeltery tap.
 
 ```sh
-brew tap dotbrains/tap
-brew install --cask dotbrains/tap/bellows
+brew tap smeltery/tap
+brew install --cask smeltery/tap/bellows
 ```
 
 Verify:
@@ -21,18 +21,18 @@ bellows self-test
 ## Go Install
 
 ```sh
-go install github.com/dotbrains/bellows@latest
+go install github.com/smeltery/bellows@latest
 ```
 
 Make sure `$(go env GOPATH)/bin` is on your `PATH`.
 
-For private Dotbrains module access, configure Go to bypass the public proxy and
+For private Smeltery module access, configure Go to bypass the public proxy and
 checksum database for the organization:
 
 ```sh
-go env -w GOPRIVATE=github.com/dotbrains/*
-go env -w GONOSUMDB=github.com/dotbrains/*
-GOPROXY=direct go install github.com/dotbrains/bellows@latest
+go env -w GOPRIVATE=github.com/smeltery/*
+go env -w GONOSUMDB=github.com/smeltery/*
+GOPROXY=direct go install github.com/smeltery/bellows@latest
 ```
 
 ## Release Archives
@@ -40,7 +40,7 @@ GOPROXY=direct go install github.com/dotbrains/bellows@latest
 Download archives from GitHub Releases when a tagged release is available:
 
 ```sh
-gh release download --repo dotbrains/bellows --pattern "bellows_*_$(go env GOOS)_$(go env GOARCH).tar.gz"
+gh release download --repo smeltery/bellows --pattern "bellows_*_$(go env GOOS)_$(go env GOARCH).tar.gz"
 ```
 
 ## Runtime Dependencies
