@@ -11,6 +11,7 @@ permissions:
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
         os: [blacksmith-4vcpu-ubuntu-2404, macos-latest]
     runs-on: ${{ matrix.os }}
@@ -51,6 +52,7 @@ jobs:
 
   build:
     strategy:
+      fail-fast: false
       matrix:
         os: [blacksmith-2vcpu-ubuntu-2404, macos-latest]
     runs-on: ${{ matrix.os }}
