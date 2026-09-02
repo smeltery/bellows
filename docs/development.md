@@ -41,7 +41,7 @@ The scheduled release check pins tool versions in
 [`.github/workflows/release-check.yml`](../.github/workflows/release-check.yml):
 
 - actionlint `v1.7.9`
-- golangci-lint `v2.11.2`
+- golangci-lint `v2.13.2`
 - GoReleaser `v2.18.0`
 
 Keep local Flox tooling and the workflow pins aligned when changing release

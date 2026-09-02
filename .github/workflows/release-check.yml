@@ -10,7 +10,7 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     env:
       ACTIONLINT_VERSION: v1.7.9
-      GOLANGCI_LINT_VERSION: v2.11.2
+      GOLANGCI_LINT_VERSION: v2.13.2
       GORELEASER_VERSION: v2.18.0
     steps:
       - uses: actions/checkout@v5
