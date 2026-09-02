@@ -42,12 +42,12 @@ The scheduled release check pins tool versions in
 
 - actionlint `v1.7.9`
 - golangci-lint `v2.11.2`
-- GoReleaser `v2.16.0`
+- GoReleaser `v2.18.0`
 
 Keep local Flox tooling and the workflow pins aligned when changing release
 checks.
 
-The release and release dry-run workflows also pin GoReleaser to `v2.16.0`.
+The release and release dry-run workflows also pin GoReleaser to `v2.18.0`.
 
 ## Local Release Check
 
