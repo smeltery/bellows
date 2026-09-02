@@ -13,7 +13,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [blacksmith-4vcpu-ubuntu-2404, macos-latest]
+        # macos-latest is omitted while GitHub-hosted macOS is blocked by org billing/spending limits.
+        os: [blacksmith-4vcpu-ubuntu-2404]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -54,7 +55,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [blacksmith-2vcpu-ubuntu-2404, macos-latest]
+        # macos-latest is omitted while GitHub-hosted macOS is blocked by org billing/spending limits.
+        os: [blacksmith-2vcpu-ubuntu-2404]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -80,7 +82,7 @@ jobs:
 
       - uses: goreleaser/goreleaser-action@v7
         with:
-          version: v2.16.0
+          version: v2.18.0
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
