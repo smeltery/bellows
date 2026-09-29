@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         # macos-latest is omitted while GitHub-hosted macOS is blocked by org billing/spending limits.
-        os: [blacksmith-4vcpu-ubuntu-2404]
+        os: [ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -44,7 +44,7 @@ jobs:
           path: coverage.out
 
   lint:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
@@ -61,7 +61,7 @@ jobs:
       fail-fast: false
       matrix:
         # macos-latest is omitted while GitHub-hosted macOS is blocked by org billing/spending limits.
-        os: [blacksmith-2vcpu-ubuntu-2404]
+        os: [ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -74,7 +74,7 @@ jobs:
         run: go build -o bellows .
 
   bellows:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 

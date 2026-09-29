@@ -1,13 +1,1 @@
-# Custom runner labels (Blacksmith) so actionlint's runner-label check passes.
-self-hosted-runner:
-  labels:
-    - blacksmith-2vcpu-ubuntu-2204
-    - blacksmith-4vcpu-ubuntu-2204
-    - blacksmith-8vcpu-ubuntu-2204
-    - blacksmith-16vcpu-ubuntu-2204
-    - blacksmith-32vcpu-ubuntu-2204
-    - blacksmith-2vcpu-ubuntu-2404
-    - blacksmith-4vcpu-ubuntu-2404
-    - blacksmith-8vcpu-ubuntu-2404
-    - blacksmith-16vcpu-ubuntu-2404
-    - blacksmith-32vcpu-ubuntu-2404
+{}
