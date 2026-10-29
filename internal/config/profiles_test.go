@@ -17,6 +17,7 @@ func profileConfig(t *testing.T, body string) (*Config, error) {
 }
 func TestNativeProfileValidation(t *testing.T) {
 	for name, body := range map[string]string{
+		"null profile":          "  bad: null",
 		"null profiles":         "  null",
 		"sequence profiles":     "  []",
 		"unknown profile field": "  native: {executor: flox, shell: true, checks: {test: {argv: [echo]}}}",
