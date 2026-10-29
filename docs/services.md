@@ -45,7 +45,8 @@ is not proof that arbitrary network-dependent workflows are reproducible.
 `Run` accepts the selected workflow, job and exact static matrix. Conditional,
 reusable, absent and empty jobs report unsupported. Reporting tokens and execution
 control variables cannot enter the child environment. Explicit allowed variables
-are passed by name; configured secret names use act's secret masking.
+use a temporary private environment file, removed after execution; configured
+secret names are passed by name and use act's secret masking.
 
 Call `Close` after execution. act receives `--rm`; cancellation sends an interrupt
 before a bounded forced stop. Bellows verifies that the daemon is empty afterward.
