@@ -83,6 +83,15 @@ func Prepare(ctx context.Context, opts Options) (_ *Run, err error) {
 			return nil, &PrepareError{verification.Invalid, err}
 		}
 	}
+	entries, err := git(ctx, opts.Root, "", "ls-tree", "-r", "-z", tree)
+	if err != nil {
+		return nil, &PrepareError{verification.Invalid, err}
+	}
+	for _, entry := range strings.Split(entries, "\x00") {
+		if strings.HasPrefix(entry, "160000 ") {
+			return nil, &PrepareError{verification.Invalid, errors.New("submodule inputs are unsupported: verification requires fully materialized committed source")}
+		}
+	}
 	if opts.TempDir == "" {
 		opts.TempDir = os.TempDir()
 	}

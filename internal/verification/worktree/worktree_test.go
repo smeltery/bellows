@@ -328,3 +328,23 @@ func TestPreparationDoesNotInheritReportingCredentials(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPrepareRejectsUnmaterializedSubmoduleInputs(t *testing.T) {
+	for _, mode := range []string{verification.ModeHead, verification.ModeMerge} {
+		t.Run(mode, func(t *testing.T) {
+			opts, head, _ := fixture(t)
+			fixtureGit(t, opts.Root, "update-index", "--add", "--cacheinfo", "160000,"+head+",vendor-module")
+			fixtureGit(t, opts.Root, "commit", "-m", "add gitlink")
+			opts.Mode = mode
+			run, err := Prepare(context.Background(), opts)
+			if run != nil {
+				if cleanupErr := run.Close(); cleanupErr != nil {
+					t.Fatal(cleanupErr)
+				}
+			}
+			if err == nil || !strings.Contains(err.Error(), "submodule") {
+				t.Fatalf("incomplete source accepted: %v", err)
+			}
+		})
+	}
+}

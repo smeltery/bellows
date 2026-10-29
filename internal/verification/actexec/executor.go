@@ -141,7 +141,14 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 	defer e.mu.Unlock()
 	result = v.Result{ID: request.Check.ID, State: v.Error}
 	start := time.Now()
-	defer func() { result.DurationMS = time.Since(start).Milliseconds() }()
+	started := false
+	defer func() {
+		result.DurationMS = time.Since(start).Milliseconds()
+		if !started && ctx.Err() != nil {
+			result.State = v.Cancelled
+			err = ctx.Err()
+		}
+	}()
 	if e.closed || request.RunID == "" || request.Check.ID == "" || request.Workflow == "" || request.Job == "" || e.fingerprint == "" || request.Identity.Executor != v.ExecutorAct || request.Identity.Fingerprints.Toolchain != e.fingerprint {
 		return result, fmt.Errorf("invalid act execution request")
 	}
@@ -287,6 +294,7 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 	if _, err = e.docker(ctx, "volume", "create", "--label", "bellows.owner="+filepath.Base(e.lease), "act-toolcache"); err != nil {
 		return result, err
 	}
+	started = true
 	runErr := cmd.Run()
 	cleanupCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()

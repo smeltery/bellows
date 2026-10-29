@@ -76,3 +76,39 @@ installation token to tests. It would need authenticated run assignment,
 freshness checks, credential rotation, and an explicit executor trust model.
 This is an operational alternative, not an implemented daemon or a reason to
 remove hosted CI or weaken branch protection.
+
+## Publish an advisory run
+
+Local verification performs no GitHub writes by default. To publish a new run,
+set `BELLOWS_REPORT_TOKEN` in the invoking environment and add these explicit
+options to `bellows verify`:
+
+```sh
+bellows verify --repository example/project --base origin/main --head HEAD \
+  --daemon unix:///path/to/dedicated/docker.sock \
+  --report --trust-workstation --pull-request 123
+```
+
+The token needs commit-status write and pull-request read permissions for the
+selected repository. It stays in the publisher process and is excluded from
+verification subprocess environments. Never pass it as a command argument or
+commit it to repository configuration.
+
+Bellows reads the live pull request head and base before each status attempt.
+Only an open pull request within the selected repository is supported. It posts
+`bellows/verify` pending before execution and a terminal advisory status after
+cleanup and receipt persistence. A changed head/base, invalid lifecycle,
+unpersisted receipt, or API error fails publication; no merge is performed.
+Local verification results remain available when terminal reporting fails.
+The GitHub status is advisory and cannot automatically expire when a base branch
+moves. Keep hosted CI and reverify against the current base before merging.
+
+For a private scratch check, use a disposable branch and pull request in a
+repository you control. Run once successfully, once with a failing check, and
+once while advancing the base. Confirm the separate advisory context and that
+the stale run cannot publish success. Close the scratch pull request afterward;
+this procedure does not change required checks or billing settings.
+
+The transport uses GitHub's documented
+[pull-request inputs](https://docs.github.com/en/rest/pulls/pulls?apiVersion=2026-03-10)
+and [commit statuses](https://docs.github.com/en/rest/commits/statuses?apiVersion=2026-03-10).

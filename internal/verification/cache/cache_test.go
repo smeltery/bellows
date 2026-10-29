@@ -159,6 +159,9 @@ func TestRetentionAndCorruption(t *testing.T) {
 }
 func TestRejectInvalidAndBindDaemon(t *testing.T) {
 	path := root(t)
+	if _, err := Open("", identity(), false); err == nil {
+		t.Fatal("empty reusable root accepted")
+	}
 	id := identity()
 	id.Fingerprints.Environment = ""
 	if _, err := Open(path, id, false); err == nil {
@@ -194,5 +197,45 @@ func TestRejectInvalidAndBindDaemon(t *testing.T) {
 	fallback := open(t, path, identity(), false)
 	if fallback.State() != "busy" {
 		t.Fatal(fallback.State())
+	}
+}
+
+func TestAbsolutePathsAndNonsymlinkOwnership(t *testing.T) {
+	path := root(t)
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	relative, err := filepath.Rel(cwd, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease := open(t, relative, identity(), false)
+	if !filepath.IsAbs(lease.path) {
+		t.Fatal("relative path forwarded to prepared checkout")
+	}
+	if err = lease.Close(); err != nil {
+		t.Fatal(err)
+	}
+	markerPath := filepath.Join(lease.path, ".owner")
+	if err = os.Remove(markerPath); err != nil {
+		t.Fatal(err)
+	}
+	foreign := filepath.Join(root(t), "owner")
+	if err = os.WriteFile(foreign, []byte(marker), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Symlink(foreign, markerPath); err != nil {
+		t.Fatal(err)
+	}
+	fallback := open(t, path, identity(), false)
+	if fallback.State() != "corrupt" {
+		t.Fatal("symlink ownership accepted")
+	}
+	if err = Prune(path, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = os.Stat(foreign); err != nil {
+		t.Fatal("foreign marker pruned")
 	}
 }

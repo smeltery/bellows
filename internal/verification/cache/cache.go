@@ -46,6 +46,13 @@ func Open(root string, id v.Identity, cold bool) (lease *Lease, err error) {
 	if cold {
 		return disposable("cold")
 	}
+	if root == "" {
+		return nil, fmt.Errorf("cache root is required")
+	}
+	root, err = filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
 	if err := privateDirectory(root); err != nil {
 		return nil, err
 	}
@@ -96,6 +103,11 @@ func disposable(state string) (*Lease, error) {
 	if err != nil {
 		return nil, err
 	}
+	absolute, absErr := filepath.Abs(path)
+	if absErr != nil {
+		return nil, errors.Join(absErr, os.RemoveAll(path))
+	}
+	path = absolute
 	if err = os.Mkdir(filepath.Join(path, "npm"), 0700); err != nil {
 		return nil, errors.Join(err, os.RemoveAll(path))
 	}
@@ -149,7 +161,12 @@ func owned(path string) bool {
 	if err != nil || !info.IsDir() || info.Mode().Perm()&0077 != 0 {
 		return false
 	}
-	owner, err := os.ReadFile(filepath.Join(path, ".owner"))
+	markerPath := filepath.Join(path, ".owner")
+	markerInfo, err := os.Lstat(markerPath)
+	if err != nil || !markerInfo.Mode().IsRegular() || markerInfo.Mode().Perm()&0077 != 0 {
+		return false
+	}
+	owner, err := os.ReadFile(markerPath)
 	return err == nil && string(owner) == marker
 }
 func lock(root string) error {
