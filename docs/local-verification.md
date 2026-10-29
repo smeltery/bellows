@@ -40,6 +40,11 @@ profiles:
 Keep the project's package manager and lock file. For a monorepo, express a
 preparation check and prerequisites explicitly; only reuse build outputs when
 the project's preparation command validates their source and toolchain identity.
+The [Go/web monorepo example](../examples/monorepo-native.yml) verifies a Go
+module and an npm project in `web/`, with an explicit install prerequisite. Its
+Flox environment must provide both Go and Node. Adapt commands to the scripts
+your repository already supports.
+
 Every profile check is required. Arguments are literal; shell interpretation
 requires an explicitly configured shell command.
 
@@ -54,6 +59,7 @@ bellows verify --repository example/project --base origin/main --head HEAD \
 The default mode tests the proposed merge. `--mode head` tests only the source
 commit. Uncommitted edits in the original checkout are excluded. The prepared
 checkout contains the committed files even when the source checkout is sparse.
+Git submodule inputs are currently unsupported and are rejected.
 Use the platform the project supports: a Linux container does not establish
 native macOS behavior, and a macOS run does not establish Linux service parity.
 
