@@ -15,15 +15,16 @@ const (
 )
 
 type Config struct {
-	Version          int             `yaml:"version"`
-	DefaultWorkflows []string        `yaml:"default_workflows,omitempty"`
-	Event            string          `yaml:"event,omitempty"`
-	Docker           DockerConfig    `yaml:"docker,omitempty"`
-	Runner           RunnerConfig    `yaml:"runner,omitempty"`
-	Secrets          SecretsConfig   `yaml:"secrets,omitempty"`
-	Skip             SkipConfig      `yaml:"skip,omitempty"`
-	Policy           PolicyConfig    `yaml:"policy,omitempty"`
-	Precommit        PrecommitConfig `yaml:"precommit,omitempty"`
+	Version          int                      `yaml:"version"`
+	DefaultWorkflows []string                 `yaml:"default_workflows,omitempty"`
+	Event            string                   `yaml:"event,omitempty"`
+	Docker           DockerConfig             `yaml:"docker,omitempty"`
+	Runner           RunnerConfig             `yaml:"runner,omitempty"`
+	Secrets          SecretsConfig            `yaml:"secrets,omitempty"`
+	Skip             SkipConfig               `yaml:"skip,omitempty"`
+	Policy           PolicyConfig             `yaml:"policy,omitempty"`
+	Precommit        PrecommitConfig          `yaml:"precommit,omitempty"`
+	Profiles         map[string]NativeProfile `yaml:"profiles,omitempty"`
 }
 
 type DockerConfig struct {
@@ -137,13 +138,16 @@ func validateSchemaShape(data []byte) error {
 		return nil
 	}
 	allowed := map[string]map[string]bool{
-		"":          keys("version", "default_workflows", "event", "docker", "runner", "secrets", "skip", "policy", "precommit"),
+		"":          keys("version", "default_workflows", "event", "docker", "runner", "secrets", "skip", "policy", "precommit", "profiles"),
 		"docker":    keys("platform", "pull"),
 		"runner":    keys("default_image", "map"),
 		"secrets":   keys("mode", "allow"),
 		"skip":      keys("jobs", "steps_matching"),
 		"policy":    keys("cloud_jobs", "waivers"),
 		"precommit": keys("stage", "mode", "timeout_seconds", "paths"),
+	}
+	if profiles := mappingValue(root, "profiles"); profiles != nil && profiles.Kind != yaml.MappingNode {
+		return fmt.Errorf("profiles must be a mapping")
 	}
 	return validateKeys(root, "", allowed)
 }
@@ -489,7 +493,7 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("policy.waivers[%d].reason is required", i)
 		}
 	}
-	return nil
+	return c.ValidateProfiles()
 }
 
 func (c *Config) ValidatePaths() error {

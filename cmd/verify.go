@@ -31,11 +31,11 @@ import (
 )
 
 func newVerifyCmd(opts *cliOptions) *cobra.Command {
-	var repository, base, head, mode, daemon, format, artifacts, leases string
+	var repository, base, head, mode, daemon, format, artifacts, leases, profile string
 	cmd := &cobra.Command{Use: "verify", Short: "Verify committed changes locally and save an advisory receipt", Args: cobra.NoArgs}
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
-		if !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$`).MatchString(repository) || base == "" || !verificationDaemon(daemon) {
-			return fmt.Errorf("verify requires --repository owner/name, --base and --daemon with a dedicated Unix socket or loopback TCP endpoint")
+		if !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$`).MatchString(repository) || base == "" || (profile == "" && !verificationDaemon(daemon)) || (profile != "" && cmd.Flags().Changed("daemon")) {
+			return fmt.Errorf("verify requires --repository owner/name, --base and either --profile or --daemon with a dedicated Unix socket or loopback TCP endpoint")
 		}
 		if (format != "text" && format != "json") || (mode != v.ModeMerge && mode != v.ModeHead) {
 			return fmt.Errorf("verify requires --format text|json and --mode merge|head")
@@ -48,7 +48,11 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		for name, value := range map[string]*string{"receipts": &artifacts, "leases": &leases} {
+		directories := map[string]*string{"receipts": &artifacts}
+		if profile == "" {
+			directories["leases"] = &leases
+		}
+		for name, value := range directories {
 			if *value == "" {
 				*value = filepath.Join(cache, "bellows", name)
 			}
@@ -66,6 +70,9 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 			Worktree: worktree.Options{Root: root, Repository: repository, Base: base, Head: head, Mode: mode}, Artifacts: artifacts,
 			Stdout: cmd.ErrOrStderr(), Stderr: cmd.ErrOrStderr(),
 			Build: func(ctx context.Context, prepared *worktree.Run) (verificationrun.Plan, error) {
+				if profile != "" {
+					return buildNativeVerificationPlan(ctx, profile, prepared)
+				}
 				return buildVerificationPlan(ctx, root, daemon, leases, prepared)
 			},
 		})
@@ -83,6 +90,7 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 	cmd.Flags().StringVar(&base, "base", "", "target branch or commit")
 	cmd.Flags().StringVar(&head, "head", "HEAD", "source branch or commit")
 	cmd.Flags().StringVar(&mode, "mode", v.ModeMerge, "input mode: merge or head")
+	cmd.Flags().StringVar(&profile, "profile", "", "explicit native Flox verification profile (without --daemon)")
 	cmd.Flags().StringVar(&daemon, "daemon", "", "operator-owned dedicated Linux Docker socket URL")
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text or json")
 	cmd.Flags().StringVar(&artifacts, "artifacts", "", "private receipt directory (default: user cache/bellows/receipts)")
