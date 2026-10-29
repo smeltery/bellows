@@ -12,7 +12,9 @@ import (
 func git(t *testing.T, root string, args ...string) string {
 	t.Helper()
 	options := []string{"-C", root, "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false", "-c", "core.hooksPath=" + filepath.Join(root, ".no-hooks"), "-c", "user.name=Test", "-c", "user.email=test@example.invalid"}
-	out, err := exec.Command("git", append(options, args...)...).CombinedOutput()
+	cmd := exec.Command("git", append(options, args...)...)
+	cmd.Env = gitEnvironment()
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
@@ -162,5 +164,26 @@ func TestDiscoverRejectsShallowCommittedHistory(t *testing.T) {
 	git(t, root, "clone", "--depth=1", "file://"+root, clone)
 	if _, err := Discover(clone, Options{Scope: BaseHead, Base: "HEAD"}); err == nil || !strings.Contains(err.Error(), "unshallow") {
 		t.Fatalf("shallow history: %v", err)
+	}
+}
+
+func TestDiscoverIgnoresInheritedRepositoryEnvironment(t *testing.T) {
+	root := repository(t)
+	commit(t, root)
+	write(t, root, "own", "change")
+	foreign := repository(t)
+	foreignHead := commit(t, foreign)
+	write(t, foreign, "foreign", "must not be included")
+	t.Setenv("GIT_DIR", filepath.Join(foreign, ".git"))
+	t.Setenv("GIT_WORK_TREE", foreign)
+	t.Setenv("GIT_COMMON_DIR", filepath.Join(foreign, ".git"))
+	t.Setenv("GIT_INDEX_FILE", filepath.Join(foreign, ".git", "index"))
+	got, err := GitFiles(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertFiles(t, got, []string{"own"})
+	if git(t, foreign, "rev-parse", "HEAD") != foreignHead {
+		t.Fatal("foreign repository was modified")
 	}
 }

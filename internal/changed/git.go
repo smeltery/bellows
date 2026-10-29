@@ -2,6 +2,7 @@ package changed
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"sort"
 	"strings"
@@ -110,6 +111,7 @@ func Discover(repoRoot string, opts Options) (Changes, error) {
 
 func gitOutput(root string, args ...string) (string, error) {
 	cmd := exec.Command("git", append([]string{"-C", root}, args...)...)
+	cmd.Env = gitEnvironment()
 	out, err := cmd.Output()
 	if err != nil {
 		if failure, ok := err.(*exec.ExitError); ok {
@@ -118,4 +120,15 @@ func gitOutput(root string, args ...string) (string, error) {
 		return "", fmt.Errorf("git %s: %w", args[0], err)
 	}
 	return string(out), nil
+}
+
+// Hooks export repository overrides that would defeat git -C when inspecting another worktree.
+func gitEnvironment() []string {
+	var env []string
+	for _, value := range os.Environ() {
+		if !strings.HasPrefix(value, "GIT_") {
+			env = append(env, value)
+		}
+	}
+	return env
 }
