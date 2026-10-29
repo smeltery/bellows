@@ -139,7 +139,7 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 	result = v.Result{ID: request.Check.ID, State: v.Error}
 	start := time.Now()
 	defer func() { result.DurationMS = time.Since(start).Milliseconds() }()
-	if e.closed || request.RunID == "" || request.Check.ID == "" || request.Workflow == "" || request.Job == "" || request.Identity.Executor != v.ExecutorAct || request.Identity.Fingerprints.Toolchain != e.fingerprint {
+	if e.closed || request.RunID == "" || request.Check.ID == "" || request.Workflow == "" || request.Job == "" || e.fingerprint == "" || request.Identity.Executor != v.ExecutorAct || request.Identity.Fingerprints.Toolchain != e.fingerprint {
 		return result, fmt.Errorf("invalid act execution request")
 	}
 	for _, entry := range request.Env {
@@ -173,7 +173,7 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 		return result, fmt.Errorf("%w: workflow event does not match", ErrUnsupported)
 	}
 	job, exists := wf.Jobs[request.Job]
-	if !exists || job.UnsupportedMatrix || job.If != "" || job.Uses != "" || len(job.Steps) == 0 {
+	if !exists || job.UnsupportedMatrix || job.If != "" || job.Uses != "" || len(job.Steps) == 0 || len(job.RunsOn) == 0 {
 		result.State = v.Unsupported
 		return result, fmt.Errorf("%w: absent, conditional, reusable or empty job", ErrUnsupported)
 	}

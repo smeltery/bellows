@@ -53,3 +53,6 @@ Recommended defaults:
 Bellows reduces wasted cloud runner minutes by catching failures earlier. It
 does not replace protected branch checks, GitHub Actions status checks, or
 Blacksmith-hosted CI.
+
+For optional local status publication, see [trusted advisory reporting](trusted-reporting.md)
+for operator opt-in, credential separation, and workstation trust limitations.
