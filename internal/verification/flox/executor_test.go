@@ -157,3 +157,76 @@ func TestToolchainForLockRejectsInvalidJSON(t *testing.T) {
 		t.Fatal("accepted malformed committed lock")
 	}
 }
+
+func TestCancellationAllowsOwnedCleanup(t *testing.T) {
+	e, r := fixture(t)
+	marker := filepath.Join(r.Worktree, "cleaned")
+	ready := filepath.Join(r.Worktree, "ready")
+	r.Argv = []string{"/bin/sh", "-c", `trap 'touch "$1"; exit 0' TERM; touch "$2"; while :; do sleep 1; done`, "fixture", marker, ready}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		result, err := e.Run(ctx, r)
+		if err != nil || result.State != verification.Cancelled {
+			t.Errorf("%+v %v", result, err)
+		}
+	}()
+	deadline := time.After(5 * time.Second)
+	for {
+		if _, err := os.Stat(ready); err == nil {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("check never started")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(7 * time.Second):
+		t.Fatal("cancelled process did not stop")
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("owned cleanup was not allowed: %v", err)
+	}
+}
+
+func TestCancellationEscalatesWhenCleanupDoesNotFinish(t *testing.T) {
+	e, r := fixture(t)
+	ready := filepath.Join(r.Worktree, "ready")
+	r.Argv = []string{"/bin/sh", "-c", `trap '' TERM; touch "$1"; exec sleep 30`, "fixture", ready}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan verification.Result, 1)
+	go func() {
+		result, err := e.Run(ctx, r)
+		if err != nil {
+			t.Errorf("run: %v", err)
+		}
+		done <- result
+	}()
+	deadline := time.After(5 * time.Second)
+	for {
+		if _, err := os.Stat(ready); err == nil {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("check never started")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+	cancel()
+	select {
+	case result := <-done:
+		if result.State != verification.Cancelled {
+			t.Fatalf("%+v", result)
+		}
+	case <-time.After(7 * time.Second):
+		t.Fatal("unresponsive check outlived cancellation deadline")
+	}
+}
