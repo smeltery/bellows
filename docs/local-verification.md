@@ -87,7 +87,10 @@ base branch advances.
 ## Publish deliberately
 
 See [trusted reporting](trusted-reporting.md) for explicit workstation opt-in,
-token permissions, live PR identity checks and a private scratch-PR procedure.
+token permissions, live branch-ref checks and a private scratch-PR procedure.
+Private reporting needs Commit statuses write, Pull requests read and Contents
+read permissions; the last resolves current branch SHAs instead of stale PR
+snapshots.
 No publication occurs by default. Repository code runs with the local user's
 trust; neither native execution nor a Docker socket provides a security boundary
 against hostile code running as that user.
