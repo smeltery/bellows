@@ -19,7 +19,7 @@ jobs:
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag || 'latest' }}
     steps:
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version: stable
           cache: false
@@ -40,7 +40,7 @@ jobs:
       GONOSUMDB: github.com/smeltery/*
       TAG: ${{ github.event.release.tag_name || inputs.tag || 'latest' }}
     steps:
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version: stable
           cache: false
