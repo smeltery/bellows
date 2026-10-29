@@ -4,24 +4,31 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
+var serviceContextPattern = regexp.MustCompile(`(?i)\bjob\s*(?:\.\s*services|\[\s*["']services["']\s*\])`)
+
 type Workflow struct {
-	Path string
-	Name string
-	Jobs map[string]Job
+	UnsupportedServiceContext bool
+	Events                    []string
+	Path                      string
+	Name                      string
+	Jobs                      map[string]Job
 }
 
 type Job struct {
+	UnsupportedMatrix bool
+	If, Uses          string
+	Images            []string
 	RunsOn            []string
 	Needs             []string
 	Steps             []Step
 	Matrix            map[string][]string
-	UnsupportedMatrix bool
 	Permissions       map[string]string
 	Environment       []string
 }
@@ -35,11 +42,17 @@ type Step struct {
 }
 
 type rawWorkflow struct {
+	On   yaml.Node         `yaml:"on"`
 	Name string            `yaml:"name"`
 	Jobs map[string]rawJob `yaml:"jobs"`
 }
 
 type rawJob struct {
+	If        string    `yaml:"if"`
+	Container yaml.Node `yaml:"container"`
+	Services  map[string]struct {
+		Image string `yaml:"image"`
+	} `yaml:"services"`
 	RunsOn      yaml.Node      `yaml:"runs-on"`
 	Needs       yaml.Node      `yaml:"needs"`
 	Steps       []rawStep      `yaml:"steps"`
@@ -98,24 +111,44 @@ func Load(path string) (Workflow, error) {
 	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return Workflow{}, fmt.Errorf("parsing workflow %s: %w", path, err)
 	}
+	events := nodeStrings(raw.On)
+	if raw.On.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(raw.On.Content); i += 2 {
+			events = append(events, raw.On.Content[i].Value)
+		}
+	}
+	sort.Strings(events)
 	wf := Workflow{
-		Path: path,
-		Name: raw.Name,
-		Jobs: map[string]Job{},
+		UnsupportedServiceContext: serviceContextPattern.Match(data),
+		Events:                    events,
+		Path:                      path,
+		Name:                      raw.Name,
+		Jobs:                      map[string]Job{},
 	}
 	for id, rawJob := range raw.Jobs {
 		steps := make([]Step, 0, len(rawJob.Steps))
 		for _, step := range rawJob.Steps {
 			steps = append(steps, Step(step))
 		}
+		images := []string{}
+		if rawJob.Container.Kind == yaml.ScalarNode {
+			images = append(images, rawJob.Container.Value)
+		} else if image := mapStrings(rawJob.Container)["image"]; image != "" {
+			images = append(images, image)
+		}
+		for _, service := range rawJob.Services {
+			images = append(images, service.Image)
+		}
+		sort.Strings(images)
 		wf.Jobs[id] = Job{
-			RunsOn:            nodeStrings(rawJob.RunsOn),
-			Needs:             nodeStrings(rawJob.Needs),
-			Steps:             steps,
-			Matrix:            matrixStrings(rawJob.Strategy.Matrix),
 			UnsupportedMatrix: unsupportedMatrix(rawJob.Strategy.Matrix),
-			Permissions:       mapStrings(rawJob.Permissions),
-			Environment:       environmentStrings(rawJob.Environment),
+			If:                rawJob.If, Uses: rawJob.Uses, Images: images,
+			RunsOn:      nodeStrings(rawJob.RunsOn),
+			Needs:       nodeStrings(rawJob.Needs),
+			Steps:       steps,
+			Matrix:      matrixStrings(rawJob.Strategy.Matrix),
+			Permissions: mapStrings(rawJob.Permissions),
+			Environment: environmentStrings(rawJob.Environment),
 		}
 	}
 	return wf, nil
