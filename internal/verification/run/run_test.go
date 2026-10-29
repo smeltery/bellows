@@ -153,3 +153,27 @@ func TestConflictReceipt(t *testing.T) {
 		t.Fatalf("%+v %v", out, err)
 	}
 }
+
+func TestStartObserverCannotAlterPlan(t *testing.T) {
+	opts, _ := fixture(t)
+	opts.Start = func(_ context.Context, r v.Receipt) error { r.Checks[0].ID = "changed"; return nil }
+	out, err := Execute(context.Background(), opts)
+	if err != nil || out.State != v.Passed || out.Receipt.Checks[0].ID != "test" {
+		t.Fatalf("observer mutated plan: %+v %v", out, err)
+	}
+}
+func TestStartFailurePreventsExecution(t *testing.T) {
+	opts, _ := fixture(t)
+	called := false
+	build := opts.Build
+	opts.Build = func(ctx context.Context, w *worktree.Run) (Plan, error) {
+		p, err := build(ctx, w)
+		p.Executor = fakeExecutor(func(context.Context, v.Request) (v.Result, error) { called = true; return v.Result{}, nil })
+		return p, err
+	}
+	opts.Start = func(context.Context, v.Receipt) error { return fmt.Errorf("publisher unavailable") }
+	out, err := Execute(context.Background(), opts)
+	if err == nil || called || out.State == v.Passed || out.Path == "" {
+		t.Fatalf("unexpected execution after start failure: %+v %v", out, err)
+	}
+}

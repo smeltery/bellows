@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/smeltery/bellows/internal/changed"
 	"github.com/smeltery/bellows/internal/config"
@@ -33,12 +34,17 @@ import (
 func newVerifyCmd(opts *cliOptions) *cobra.Command {
 	var repository, base, head, mode, daemon, format, artifacts, leases, profile string
 	cmd := &cobra.Command{Use: "verify", Short: "Verify committed changes locally and save an advisory receipt", Args: cobra.NoArgs}
+	report := addReportingFlags(cmd)
+	cmd.AddCommand(newCapabilityCmd())
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		if !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$`).MatchString(repository) || base == "" || (profile == "" && !verificationDaemon(daemon)) || (profile != "" && cmd.Flags().Changed("daemon")) {
 			return fmt.Errorf("verify requires --repository owner/name, --base and either --profile or --daemon with a dedicated Unix socket or loopback TCP endpoint")
 		}
 		if (format != "text" && format != "json") || (mode != v.ModeMerge && mode != v.ModeHead) {
 			return fmt.Errorf("verify requires --format text|json and --mode merge|head")
+		}
+		if report.enabled && mode != v.ModeMerge {
+			return fmt.Errorf("advisory reporting requires merge verification mode")
 		}
 		root, err := repoRoot(opts.repoRoot)
 		if err != nil {
@@ -66,16 +72,52 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 		}
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
+		var current func(context.Context) (v.Identity, error)
+		reporter, err := report.create(repository, func(ctx context.Context) (v.Identity, error) {
+			if current == nil {
+				return v.Identity{}, fmt.Errorf("current execution identity unavailable")
+			}
+			return current(ctx)
+		})
+		if err != nil {
+			return err
+		}
+		var start func(context.Context, v.Receipt) error
+		if reporter != nil {
+			start = reporter.Start
+		}
 		out, runErr := verificationrun.Execute(ctx, verificationrun.Options{
 			Worktree: worktree.Options{Root: root, Repository: repository, Base: base, Head: head, Mode: mode}, Artifacts: artifacts,
-			Stdout: cmd.ErrOrStderr(), Stderr: cmd.ErrOrStderr(),
+			Stdout: cmd.ErrOrStderr(), Stderr: cmd.ErrOrStderr(), Start: start,
 			Build: func(ctx context.Context, prepared *worktree.Run) (verificationrun.Plan, error) {
+				var built verificationrun.Plan
+				var err error
 				if profile != "" {
-					return buildNativeVerificationPlan(ctx, profile, prepared)
+					built, err = buildNativeVerificationPlan(ctx, profile, prepared)
+				} else {
+					built, err = buildVerificationPlan(ctx, root, daemon, leases, prepared)
 				}
-				return buildVerificationPlan(ctx, root, daemon, leases, prepared)
+				current = currentWithRefs(root, base, head, built.Current)
+				return built, err
 			},
 		})
+		if reporter != nil {
+			if out.Path == "" {
+				runErr = errors.Join(runErr, fmt.Errorf("cannot publish an unpersisted verification outcome"))
+			} else {
+				reportCtx, stop := context.WithTimeout(context.Background(), 20*time.Second)
+				reportErr := reporter.Finish(reportCtx, out.Receipt)
+				stop()
+				runErr = errors.Join(runErr, reportErr)
+				if reportErr == nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "updated advisory bellows/verify for %s %s\n", repository, out.Receipt.Identity.Head)
+					if watchErr := report.watch(ctx, reporter); watchErr != nil {
+						out.State = v.Error
+						runErr = errors.Join(runErr, watchErr)
+					}
+				}
+			}
+		}
 		if format == "json" {
 			err = json.NewEncoder(cmd.OutOrStdout()).Encode(out)
 		} else {
@@ -188,5 +230,12 @@ func buildVerificationPlan(ctx context.Context, root, daemon, leases string, pre
 		}
 	}
 	out.Identity.Fingerprints.Toolchain, err = executor.Toolchain(ctx, images)
+	identity := out.Identity
+	out.Current = func(ctx context.Context) (v.Identity, error) {
+		fresh := identity
+		var err error
+		fresh.Fingerprints.Toolchain, err = executor.Toolchain(ctx, images)
+		return fresh, err
+	}
 	return out, err
 }

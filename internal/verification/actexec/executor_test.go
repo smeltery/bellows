@@ -50,7 +50,7 @@ while test "$#" -gt 0; do
 done
 case "$job" in
  fail) exit 7;;
- cancel) trap 'exit 130' INT; while :; do sleep 0.05; done;;
+ cancel) trap 'exit 130' INT; touch '`+root+`/cancel-ready'; while :; do sleep 0.05; done;;
  foreign) echo foreign > '`+root+`/owner';;
  dirty) touch '`+root+`/dirty';;
 esac
@@ -119,11 +119,33 @@ func TestDedicatedRunLifecycle(t *testing.T) {
 		t.Fatalf("%+v %v", result, err)
 	}
 	req.Job = "cancel"
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	result, err = e.Run(ctx, req)
-	if !errors.Is(err, context.DeadlineExceeded) || result.State != v.Cancelled {
-		t.Fatalf("%+v %v", result, err)
+	type outcome struct {
+		result v.Result
+		err    error
+	}
+	done := make(chan outcome, 1)
+	go func() { result, err := e.Run(ctx, req); done <- outcome{result, err} }()
+	deadline := time.After(5 * time.Second)
+	for {
+		if _, err := os.Stat(filepath.Join(root, "cancel-ready")); err == nil {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatal("act did not start")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+	cancel()
+	select {
+	case out := <-done:
+		if !errors.Is(out.err, context.Canceled) || out.result.State != v.Cancelled {
+			t.Fatalf("%+v %v", out.result, out.err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("act did not cancel")
 	}
 	if err := e.Close(); err != nil {
 		t.Fatal(err)
@@ -225,6 +247,16 @@ func TestUnsupportedServiceContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result, err := e.Run(context.Background(), req); !errors.Is(err, ErrUnsupported) || result.State != v.Unsupported {
+		t.Fatalf("%+v %v", result, err)
+	}
+}
+
+func TestCancellationBeforeActStarts(t *testing.T) {
+	e, req, _ := fake(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	result, err := e.Run(ctx, req)
+	if result.State != v.Cancelled || !errors.Is(err, context.Canceled) {
 		t.Fatalf("%+v %v", result, err)
 	}
 }
