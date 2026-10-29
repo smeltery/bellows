@@ -173,7 +173,7 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 		return result, fmt.Errorf("%w: workflow event does not match", ErrUnsupported)
 	}
 	job, exists := wf.Jobs[request.Job]
-	if !exists || job.If != "" || job.Uses != "" || len(job.Steps) == 0 {
+	if !exists || job.UnsupportedMatrix || job.If != "" || job.Uses != "" || len(job.Steps) == 0 {
 		result.State = v.Unsupported
 		return result, fmt.Errorf("%w: absent, conditional, reusable or empty job", ErrUnsupported)
 	}

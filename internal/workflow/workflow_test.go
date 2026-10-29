@@ -165,3 +165,31 @@ jobs:
 		t.Fatalf("%+v", wf)
 	}
 }
+
+func TestUnsupportedMatrixFact(t *testing.T) {
+	for name, matrix := range map[string]string{
+		"absent": "", "static": "{os: [linux, mac], version: [1, 2]}",
+		"expression": "${{ fromJSON(inputs.matrix) }}", "include": "{include: [{os: linux}]}",
+		"exclude": "{os: [linux], exclude: [{os: linux}]}", "object": "{os: [{name: linux}]}",
+		"empty": "{}", "empty axis": "{os: []}", "null": "{os: [null]}",
+		"dynamic value": "{os: ['${{ inputs.os }}']}",
+	} {
+		t.Run(name, func(t *testing.T) {
+			data := "jobs:\n  test:\n    runs-on: ubuntu-latest\n"
+			if matrix != "" {
+				data += "    strategy:\n      matrix: " + matrix + "\n"
+			}
+			path := filepath.Join(t.TempDir(), "ci.yml")
+			if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+				t.Fatal(err)
+			}
+			wf, err := Load(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, want := wf.Jobs["test"].UnsupportedMatrix, name != "absent" && name != "static"; got != want {
+				t.Fatalf("unsupported=%v want%v", got, want)
+			}
+		})
+	}
+}
