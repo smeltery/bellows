@@ -27,6 +27,7 @@ var ErrUnsupported = errors.New("dedicated Docker execution unavailable")
 var pinnedAction = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@[0-9a-f]{40}$`)
 
 type Executor struct {
+	daemonID               string
 	cfg                    *config.Config
 	endpoint, lease, cache string
 	images                 map[string]string
@@ -54,6 +55,7 @@ func New(ctx context.Context, cfg *config.Config, endpoint, leaseDir string) (*E
 	if err != nil || !info.IsDir() || info.Mode().Perm()&0077 != 0 {
 		return nil, fmt.Errorf("lease directory must exist, be private and not a symlink")
 	}
+	e.daemonID = fields[0]
 	e.lease = filepath.Join(leaseDir, fmt.Sprintf("%x.lease", sha256.Sum256([]byte(fields[0]))))
 	file, err := os.OpenFile(e.lease, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
@@ -352,3 +354,6 @@ func (e *Executor) imagesCurrent(ctx context.Context) error {
 	}
 	return nil
 }
+
+// DaemonID identifies the leased Docker daemon for repository cache binding.
+func (e *Executor) DaemonID() string { return e.daemonID }

@@ -49,4 +49,4 @@ jobs:
       - uses: flox/install-flox-action@61d86f71ca9fc8061fea04e5bc5e3a8206423dca
       - uses: flox/activate-action@6abc249840d01f0c59473f21ba74821564d320b7
         with:
-          command: BELLOWS_SERVICE_INTEGRATION=1 go test -v -timeout 15m ./internal/verification/actexec -run TestDedicatedDockerIntegration
+          command: BELLOWS_SERVICE_INTEGRATION=1 go test -v -timeout 15m ./internal/verification/actexec ./internal/verification/cache -run 'TestDedicatedDockerIntegration|TestDockerCacheIntegration'
