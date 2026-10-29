@@ -79,27 +79,27 @@
       "properties": {
         "workflow": {
           "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
+          "pattern": "^$|^[0-9a-f]{64}$"
         },
         "config": {
           "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
+          "pattern": "^$|^[0-9a-f]{64}$"
         },
         "policy": {
           "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
+          "pattern": "^$|^[0-9a-f]{64}$"
         },
         "dependencies": {
           "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
+          "pattern": "^$|^[0-9a-f]{64}$"
         },
         "toolchain": {
           "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
+          "pattern": "^$|^[0-9a-f]{64}$"
         },
         "environment": {
           "type": "string",
-          "pattern": "^[0-9a-f]{64}$"
+          "pattern": "^$|^[0-9a-f]{64}$"
         }
       }
     },
@@ -119,35 +119,36 @@
       "properties": {
         "repository": {
           "type": "string",
-          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+          "pattern": "^$|^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
         },
         "head": {
           "type": "string",
-          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+          "pattern": "^$|^([0-9a-f]{40}|[0-9a-f]{64})$"
         },
         "base": {
           "type": "string",
-          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+          "pattern": "^$|^([0-9a-f]{40}|[0-9a-f]{64})$"
         },
         "tree": {
           "type": "string",
-          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+          "pattern": "^$|^([0-9a-f]{40}|[0-9a-f]{64})$"
         },
         "mode": {
           "enum": [
+            "",
             "merge",
             "head"
           ]
         },
         "executor": {
           "enum": [
+            "",
             "act",
             "flox"
           ]
         },
         "platform": {
-          "type": "string",
-          "minLength": 1
+          "type": "string"
         },
         "fingerprints": {
           "$ref": "#/$defs/fingerprints"
@@ -216,6 +217,116 @@
           "minimum": 0
         }
       }
+    },
+    "identity_ready": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "head",
+        "base",
+        "tree",
+        "mode",
+        "executor",
+        "platform",
+        "fingerprints"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        },
+        "head": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "base": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "tree": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "mode": {
+          "enum": [
+            "merge",
+            "head"
+          ]
+        },
+        "executor": {
+          "enum": [
+            "act",
+            "flox"
+          ]
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fingerprints": {
+          "$ref": "#/$defs/fingerprints_ready"
+        }
+      }
+    },
+    "fingerprints_ready": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workflow",
+        "config",
+        "policy",
+        "dependencies",
+        "toolchain",
+        "environment"
+      ],
+      "properties": {
+        "workflow": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "config": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "policy": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "dependencies": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "toolchain": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "environment": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "input": {
+            "const": "ready"
+          }
+        },
+        "required": [
+          "input"
+        ]
+      },
+      "then": {
+        "properties": {
+          "identity": {
+            "$ref": "#/$defs/identity_ready"
+          }
+        }
+      }
+    }
+  ]
 }

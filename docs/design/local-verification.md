@@ -14,7 +14,9 @@ serialized shape. Synthetic examples live in
 `Identity.Head` is the resolved source commit, `Base` the resolved target-branch
 commit, and `Tree` the exact tree tested. In `merge` mode, the tree represents the
 proposed merge of head into base; it is not the head SHA or necessarily a durable
-merge commit. In `head` mode, the tree belongs to head, but base still identifies
+merge commit. Failed preparation cannot invent a resulting tree or fingerprints: a
+non-ready receipt uses empty strings for unresolved identity fields. Only ready
+receipts require complete object IDs and all input fingerprints. In `head` mode, the tree belongs to head, but base still identifies
 the comparison used to select checks. Git object IDs are full lowercase SHA-1 or
 SHA-256 values. Repository identity is a credential-free `owner/repo` slug.
 
@@ -58,7 +60,9 @@ Run(context.Context, verification.Request) (verification.Result, error)
 
 `Executor` runs one prepared check. `Request` carries the isolated worktree,
 run ID, immutable identity, selected check, argv or workflow/job selector,
-explicit environment and local output writers. Native commands use argv without
+an explicit static `Matrix` selector, environment and local output writers.
+Workflow adapters must execute only the selected matrix combination, and reject
+unresolved/dynamic selectors rather than running every expansion. Native commands use argv without
 an implicit shell; workflow execution uses the existing act adapter. The
 executor rejects options inappropriate for its mode instead of guessing.
 Cancellation comes from context; the executor owns its process tree and
@@ -95,6 +99,7 @@ as arrays, including empty prerequisite lists, rather than null.
 The schema checks structural shape. The receipt package must additionally
 validate graph semantics, identity/digest values, timestamp ordering, terminal
 states, duplicates and receipt completeness before persistence or reporting.
+The conflict fixture intentionally has no resulting tree or fingerprints.
 The synthetic duplicate/missing-result fixtures are deliberately structurally
 valid but semantically unsuitable for a passing result. The contract tests
 compare schema fields and enums to Go types and exercise fail-closed aggregation;

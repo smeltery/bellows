@@ -88,6 +88,7 @@ type Request struct {
 	Argv     []string
 	Workflow string
 	Job      string
+	Matrix   map[string]string
 	Env      []string
 	Stdout   io.Writer
 	Stderr   io.Writer

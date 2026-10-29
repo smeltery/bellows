@@ -60,7 +60,7 @@ func TestEvaluateRequiredChecks(t *testing.T) {
 }
 
 func TestReceiptFixtures(t *testing.T) {
-	for name, want := range map[string]State{"passed": Passed, "duplicate-result": Error, "missing-result": Error} {
+	for name, want := range map[string]State{"passed": Passed, "duplicate-result": Error, "missing-result": Error, "conflict": Error} {
 		t.Run(name, func(t *testing.T) {
 			data, err := os.ReadFile(filepath.Join("testdata", name+".json"))
 			if err != nil {
@@ -149,7 +149,39 @@ func TestReceiptSchemaMatchesContract(t *testing.T) {
 	assertEnum(properties["input"], string(Ready), string(Dirty), string(Conflict), string(Stale), string(Invalid))
 	result := definitions["result"].(map[string]any)["properties"].(map[string]any)
 	assertEnum(result["state"], string(Pending), string(Passed), string(Failed), string(Skipped), string(Cancelled), string(Unsupported), string(Error))
-	identity := definitions["identity"].(map[string]any)["properties"].(map[string]any)
+	identity := definitions["identity_ready"].(map[string]any)["properties"].(map[string]any)
 	assertEnum(identity["mode"], ModeMerge, ModeHead)
 	assertEnum(identity["executor"], ExecutorAct, ExecutorFlox)
+}
+
+func TestReadySchemaRequiresResolvedIdentity(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "docs", "schemas", "verification-receipt.schema.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema map[string]any
+	if err := json.Unmarshal(data, &schema); err != nil {
+		t.Fatal(err)
+	}
+	rule := schema["allOf"].([]any)[0].(map[string]any)
+	condition := rule["if"].(map[string]any)["properties"].(map[string]any)["input"].(map[string]any)
+	target := rule["then"].(map[string]any)["properties"].(map[string]any)["identity"].(map[string]any)
+	if condition["const"] != string(Ready) || target["$ref"] != "#/$defs/identity_ready" {
+		t.Fatal("ready identity must select strict schema")
+	}
+	defs := schema["$defs"].(map[string]any)
+	for _, name := range []string{"identity", "fingerprints"} {
+		permissive := defs[name].(map[string]any)["properties"].(map[string]any)
+		strict := defs[name+"_ready"].(map[string]any)["properties"].(map[string]any)
+		for field, value := range permissive {
+			pattern, exists := value.(map[string]any)["pattern"].(string)
+			if !exists {
+				continue
+			}
+			strictPattern := strict[field].(map[string]any)["pattern"].(string)
+			if pattern != "^$|"+strictPattern {
+				t.Fatalf("%s.%s must permit absence only outside ready state", name, field)
+			}
+		}
+	}
 }
