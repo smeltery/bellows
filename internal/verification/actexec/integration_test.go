@@ -27,7 +27,7 @@ func TestDedicatedDockerIntegration(t *testing.T) {
 			defer cancel()
 			run := func(args ...string) string {
 				t.Helper()
-				output, err := exec.CommandContext(ctx, "docker", args...).CombinedOutput()
+				output, err := exec.CommandContext(ctx, "docker", args...).Output()
 				if err != nil {
 					t.Fatalf("docker %v: %v\n%s", args, err, output)
 				}
