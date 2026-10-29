@@ -56,7 +56,8 @@ resources or deletes unexplained container IDs. Leftovers
 produce an error and retain the lease. The operator must then dispose of the owned
 daemon, inspect the failure, and remove its stale lease. This also covers hard
 process termination. Ordinary success releases only the executor's own temporary
-cache and lease.
+cache and lease. Toolchain identity can still be read after closing for freshness
+checks; execution cannot restart.
 
 ## Run the synthetic parity test
 
@@ -78,7 +79,8 @@ The fixture contains only synthetic credentials and no private project content.
 act v0.2.88 did not populate `job.services.postgres.ports[5432]` in the real
 fixture. The synthetic job resolves its dynamic port through Docker inspect;
 workflows depending on that GitHub context require adaptation and cannot claim
-unchanged parity. The executor does not rewrite their expressions.
+unchanged parity. The executor conservatively rejects workflows mentioning that context, including
+spaced and bracket access forms; it does not interpret or rewrite expressions.
 
 The Ubuntu CI service job runs this test. macOS/Docker Desktop parity has not been
 measured; a missing local Docker daemon is an explicit limitation, not a passing

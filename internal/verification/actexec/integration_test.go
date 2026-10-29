@@ -101,6 +101,11 @@ func TestDedicatedDockerIntegration(t *testing.T) {
 			if err = e.Close(); err != nil {
 				t.Fatalf("cleanup: %v\n%s", err, &log)
 			}
+			current, err := e.Toolchain(ctx, []string{"docker:28-cli", "postgres:17-alpine"})
+			if err != nil || current != digest {
+				t.Fatalf("post-close freshness: %s %v", current, err)
+			}
+
 		})
 	}
 }
