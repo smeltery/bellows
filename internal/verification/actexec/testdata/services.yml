@@ -1,0 +1,33 @@
+name: synthetic-services
+on: pull_request
+jobs:
+  service:
+    runs-on: ubuntu-latest
+    container:
+      image: docker:28-cli
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: synthetic-only
+        ports: [5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 1s --health-timeout 3s --health-retries 30
+    defaults:
+      run:
+        shell: sh
+    steps:
+      - name: Service DNS, readiness, SQL and child Docker
+        env:
+          HOST_PORT: ${{ job.services.postgres.ports[5432] }}
+        run: |
+          docker version
+          network=$(docker inspect -f '{{range $name, $value := .NetworkSettings.Networks}}{{$name}}{{end}}' "$HOSTNAME")
+          docker run --rm --network "$network" postgres:17-alpine pg_isready -h postgres -U postgres
+          docker run --rm --network "$network" -e PGPASSWORD=synthetic-only postgres:17-alpine psql -h postgres -U postgres -c 'SELECT 1'
+          docker run --rm --network host postgres:17-alpine pg_isready -h 127.0.0.1 -p "$HOST_PORT" -U postgres
+          case "$BELLOWS_FIXTURE_MODE" in
+            fail) exit 7 ;;
+            cancel) sleep 120 ;;
+          esac
