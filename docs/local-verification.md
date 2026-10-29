@@ -63,6 +63,11 @@ Git submodule inputs are currently unsupported and are rejected.
 Use the platform the project supports: a Linux container does not establish
 native macOS behavior, and a macOS run does not establish Linux service parity.
 
+For repeated native runs, add `--download-cache` to reuse scoped npm downloads,
+or `--cold-cache` to use an empty disposable npm store. These controls do not
+reuse test results. See [cache behavior](caches.md) for retention, concurrent runs
+and Docker build-layer boundaries.
+
 ## Read the result
 
 JSON output includes the receipt and its private artifact path. Check logs stream

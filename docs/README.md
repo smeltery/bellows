@@ -11,6 +11,8 @@ Use these docs when adding Bellows to a repository:
 - [trusted-reporting.md](trusted-reporting.md): intentionally publish advisory
   statuses with fresh input checks.
 - [services.md](services.md): use isolated dedicated Docker daemons.
+- [caches.md](caches.md): reuse scoped downloads and build layers with explicit
+  cold-cache controls.
 
 - [how-it-works.md](how-it-works.md): execution model and workflow diagrams.
 - [releases.md](releases.md): automatic versions and release recovery.
