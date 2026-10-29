@@ -1,7 +1,7 @@
 # Advisory verification acceptance audit
 
-**Draft; acceptance remains pending.** This audit covers Bellows `6fe9556`
-(released as `v0.3.13`) on 2026-10-29. A merged component and its synthetic tests
+**Draft; acceptance remains pending.** This audit covers Bellows `e92c00b`
+(released as `v0.3.14`) on 2026-10-29. A merged component and its synthetic tests
 do not establish complete parity for a consuming private repository.
 The acceptance decision waits for the private rollout (NIC-68) and public user
 documentation (NIC-69), including the unresolved evidence below.
@@ -53,9 +53,9 @@ the detailed evidence; no private source or logs are reproduced here.
 | NIC-63: prepare once | [Private PR 75](https://github.com/smeltery/nightshift/pull/75), `f25ac8b` | Merged. Private preparation identity and regression tests retain independent hosted shard commands. Final consuming profile must run preparation regressions as well as prepared shards. |
 | NIC-64: private configuration/hooks | [Private PR 76](https://github.com/smeltery/nightshift/pull/76) | Pending. Reviewed immutable scope, existing-hook preservation and fresh-checkout setup need the final complete-profile evidence and merge reference. Hosted jobs remain. |
 | NIC-65: complete private parity | Private parity evidence, linked from PR 76 | Pending. Full required services/shards/images, cold/warm runs, concurrent runs, injected failures and owned cleanup must all have final-version evidence. Partial shard or engine passes cannot substitute for this matrix. |
-| NIC-66: stale advisory results | [PR 25](https://github.com/smeltery/bellows/pull/25), `901c499` | Merged. Identity/ref movement, superseded attempts, bounded watch and capability tests. Read-only capability reporting never claims merge authorization or changes repository settings. |
+| NIC-66: stale advisory results | [PR 25](https://github.com/smeltery/bellows/pull/25), `901c499` | Merged, with current-ref correction in PR 28. Identity/ref movement, superseded attempts, bounded watch and capability tests. Read-only capability reporting never claims merge authorization or changes repository settings. |
 | NIC-67: measured performance | Private measurement workstream | Pending. Final complete-coverage runs need commit/hardware/cache/repetition provenance, failure timing and measured local latency. No avoided hosted cost is established while hosted workflows remain enabled. |
-| NIC-68: advisory rollout | Private scratch-PR rollout | Pending. Live passing, failing, skipped/cancelled and stale advisory outcomes; unchanged hosted triggers/contexts; adoption and rollback exercise; recorded billing and bypass limitations. |
+| NIC-68: advisory rollout | Private scratch-PR rollout | Pending rollout completion. Six live advisory cases passed with the freshness fix; unchanged hosted triggers/contexts, adoption/rollback and final documentation still need the complete rollout record. |
 | NIC-69: user documentation | [PR 22](https://github.com/smeltery/bellows/pull/22) | Pending merge. Public setup, receipt inspection, intentional reporting, stale recovery and permission guidance must match shipped commands and pass documentation checks. |
 | NIC-70: acceptance | This audit | Pending NIC-68 and NIC-69, complete parity and final release checks. Replace pending references with merged versions and evidence before accepting. |
 | NIC-71: successful-result reuse | Post-acceptance optimization | Deferred by design. Not implemented or enabled in this release. Requires independent provenance, complete identity/plan invalidation, expiry and failure tests; it must not block the advisory MVP. |
@@ -94,12 +94,29 @@ Independent failure-injection, concurrent-run and cancellation evidence remains
 pending in NIC-65. These checkpoint summaries do not replace the final private
 receipt matrix, which retains each run's distinct source identity.
 
+[PR 28](https://github.com/smeltery/bellows/pull/28) (`e92c00b`, NIC-74)
+fixes a freshness defect discovered during the live advisory exercise: GitHub's
+pull-request snapshot could retain an old base SHA after the target branch
+advanced. Reporting now resolves both current branch refs and rejects invalid
+or inaccessible refs. Private reporting therefore also needs Contents read.
+The focused PR passed Linux, macOS and real-service CI plus independent review.
+
+All six live private advisory cases passed with the fixed binary: success,
+failure, cancellation, head movement, base movement and post-success base-watch
+invalidation. Persisted receipts and exact identities/results were independently
+checked. This minimal transport exercise establishes advisory lifecycle behavior;
+it does not establish the full private services/shards/images parity matrix.
+Rollout documentation, adoption/rollback and final integrated versions remain
+pending NIC-68.
+
 ## Public evidence and invariants
 
-[Main CI run 40912041059](https://github.com/smeltery/bellows/actions/runs/40912041059)
-passed on `6fe9556`: Linux/macOS release checks and the Linux real-service/cache
-job. Release and smoke runs also passed for
-[v0.3.13](https://github.com/smeltery/bellows/releases/tag/v0.3.13).
+[Main CI run 40958573358](https://github.com/smeltery/bellows/actions/runs/40958573358)
+passed on `e92c00b`: Linux/macOS release checks and the Linux real-service/cache
+job. [Release](https://github.com/smeltery/bellows/actions/runs/40959003183) and
+[smoke](https://github.com/smeltery/bellows/actions/runs/40959357491) also passed
+for [v0.3.14](https://github.com/smeltery/bellows/releases/tag/v0.3.14), including
+archive, Homebrew and Go installation checks.
 The shared gate runs Markdown/Mermaid validation, workflow/release validation,
 Go lint, race tests, coverage, build and CLI self-checks through Flox.
 
@@ -123,7 +140,7 @@ The following test groups provide reproducible public evidence:
   opt-in real Docker tests in the Linux services job. A normal Go test run can
   skip these, so its pass alone is insufficient evidence of service parity.
 
-Measured production size at the audited commit is **6,788 / 7,000** nonblank Go
+Measured production size at the audited commit is **6,836 / 7,000** nonblank Go
 lines and **30 / 80** custom tooling lines. The reviewed allocation is in
 [development](development.md); this documentation change adds no production
 code or budget allowance.
@@ -160,7 +177,8 @@ required context or change repository privacy, billing or branch settings.
 3. Preserve private evidence for cold/warm complete runs, independent concurrent
    attempts, representative lint/shard/database/image failures, cancellation
    and cleanup. Explain any supported-platform limitation explicitly.
-4. Complete the live advisory scratch-PR and rollback exercise. Confirm hosted
+4. Incorporate the completed six-case advisory scratch-PR evidence and finish
+   the adoption/rollback exercise. Confirm hosted
    CI is still attempted and record infrastructure restrictions separately from
    execution failures. Do not certify direct UI/API merge enforcement.
 5. Merge public user documentation, rerun final integrated checks, update this
