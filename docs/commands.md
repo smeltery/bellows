@@ -254,6 +254,35 @@ bellows migrate github-actions --format json
 The report includes detected workflows, runner labels, local runner mappings,
 cloud-like jobs to skip, a recommended `.bellows.yml`, and next commands.
 
+## `bellows verify`
+
+Verify committed head/base changes in a disposable worktree and save an advisory
+receipt. The original checkout may contain local edits. Hosted CI remains in use;
+this command neither publishes statuses nor enforces a GitHub merge gate.
+
+```sh
+bellows verify --repository owner/project --base origin/main \
+  --daemon unix:///path/to/dedicated-docker.sock
+bellows verify --repository owner/project --base origin/main --head feature \
+  --daemon tcp://127.0.0.1:2375 --format json
+```
+
+Use an operator-owned, empty Linux Docker daemon dedicated to verification, with
+runner and service images already pulled. Supported endpoints are Unix sockets
+and explicit loopback TCP addresses. Configure `default_workflows` and
+`secrets.mode: none` in `.bellows.yml`; cloud deployment jobs must be skipped.
+Unsupported or skipped required checks cannot produce a passing result.
+
+`--mode merge` verifies the proposed merge tree by default; `--mode head` verifies
+the committed head tree. `--head` defaults to `HEAD`. `--artifacts` and `--leases`
+override private directories under the user cache's `bellows` directory. All
+processes using the same dedicated daemon must share its lease directory.
+
+`--format json` writes the outcome and receipt to stdout; check logs go to stderr.
+Failures, cancellation, unsupported inputs, and receipt-write errors return a
+nonzero exit status. Local receipts record observations and do not authenticate
+the execution of hostile code.
+
 ## `bellows completion`
 
 Generate shell completion scripts.
