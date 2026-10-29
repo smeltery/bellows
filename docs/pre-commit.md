@@ -116,3 +116,50 @@ Debug rule selection without running Docker:
 ```sh
 bellows explain changed-files
 ```
+
+## Existing Lefthook repositories
+
+Keep Lefthook as your hook manager. Add a named command under the existing
+`pre-push.commands` mapping in `lefthook.yml`; retain the rest of your file,
+including format and lint hooks. If a `bellows` command already exists, update
+that entry instead of adding a duplicate YAML key.
+
+```yaml
+pre-push:
+  commands:
+    bellows:
+      run: bellows run --precommit
+```
+
+Install Bellows and its runtime dependencies, then initialize its configuration
+without generating another hook manager's configuration:
+
+```sh
+bellows init
+lefthook install
+lefthook run pre-push
+```
+
+Run `bellows init` only when `.bellows.yml` does not already exist. Review the
+configuration before enabling the hook. Re-running `lefthook install` after
+editing its configuration does not require replacing your existing commands.
+Do not use `bellows hooks install` or `pre-commit install` alongside Lefthook;
+those instructions above are for repositories using the pre-commit framework.
+
+For a repository whose Flox environment supplies Bellows, act and Docker CLI,
+replace only the command's `run` value:
+
+```yaml
+run: flox activate -- bellows run --precommit
+```
+
+Lefthook starts commands from the repository; no hard-coded checkout path is
+needed, including when the directory contains spaces. Activate Flox explicitly
+in the command so Git clients do not depend on an interactive shell activation.
+Flox itself must be available to the Git client. A running Docker daemon is still
+required. A failed command makes the pre-push hook fail.
+
+Keep full verification for pre-push unless your changed-file rules are proven to
+cover the changes being pushed. Local hooks can be bypassed and are developer
+feedback, not enforced GitHub merge protection. Keep hosted CI and existing
+repository protections in place when using advisory local verification.

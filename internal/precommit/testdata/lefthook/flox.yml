@@ -1,0 +1,6 @@
+extends:
+  - lefthook.yml
+pre-push:
+  commands:
+    bellows:
+      run: flox activate -- bellows run --precommit
