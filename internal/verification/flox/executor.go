@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -89,7 +90,8 @@ func (e Executor) ToolchainForLock(ctx context.Context, lock []byte) (string, er
 	if err != nil {
 		return "", err
 	}
-	boundProcess(cmd)
+	finish := boundProcess(cmd)
+	defer finish()
 	version, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("inspect Flox version: %w", err)
@@ -136,7 +138,8 @@ func (e Executor) Run(ctx context.Context, request verification.Request) (result
 	}
 	cmd := exec.CommandContext(ctx, e.binary(), append([]string{"activate", "--"}, request.Argv...)...)
 	cmd.Dir, cmd.Env, cmd.Stdout, cmd.Stderr = request.Worktree, env, request.Stdout, request.Stderr
-	boundProcess(cmd)
+	finish := boundProcess(cmd)
+	defer finish()
 	runErr := cmd.Run()
 	if ctx.Err() != nil {
 		result.State = verification.Cancelled
@@ -167,14 +170,33 @@ func (e Executor) Run(ctx context.Context, request verification.Request) (result
 	return result, nil
 }
 
-func boundProcess(cmd *exec.Cmd) {
+// Give an owned process time to release resources, then kill its whole group.
+func boundProcess(cmd *exec.Cmd) func() {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	var mu sync.Mutex
+	var timer *time.Timer
+	cancelled := false
+	kill := func() { _ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	cmd.Cancel = func() error {
-		if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL); errors.Is(err, syscall.ESRCH) {
+		mu.Lock()
+		defer mu.Unlock()
+		err := syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
+		if errors.Is(err, syscall.ESRCH) {
 			return os.ErrProcessDone
-		} else {
-			return err
+		}
+		cancelled = true
+		timer = time.AfterFunc(5*time.Second, kill)
+		return err
+	}
+	cmd.WaitDelay = 6 * time.Second
+	return func() {
+		mu.Lock()
+		defer mu.Unlock()
+		if timer != nil {
+			timer.Stop()
+		}
+		if cancelled {
+			kill()
 		}
 	}
-	cmd.WaitDelay = time.Second
 }

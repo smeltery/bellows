@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -81,9 +82,30 @@ func TestNativeCacheFlagsEndToEnd(t *testing.T) {
 	if _, err := os.Stat(disposable); !os.IsNotExist(err) {
 		t.Fatal("cold store retained")
 	}
+	closed := false
+	plan, err := applyVerificationCache(root, privateVerificationDir(t), true, true, verificationrun.Plan{
+		Identity: first.Receipt.Identity,
+		Current:  func(context.Context) (v.Identity, error) { return first.Receipt.Identity, nil },
+		Close:    func() error { closed = true; return nil },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolve := currentWithRefs(root, "main", "HEAD", plan.Current)
+	if err := plan.Close(); err != nil || !closed {
+		t.Fatal("cache close lost executor cleanup", err)
+	}
+	before, err := resolve(context.Background())
+	if err != nil || before.Fingerprints != plan.Identity.Fingerprints {
+		t.Fatal("closed cache lost normalized identity", err)
+	}
 	write("source.txt", "changed source")
 	git("add", ".")
 	git("commit", "-m", "source change")
+	after, err := resolve(context.Background())
+	if err != nil || after.Head == before.Head || after.Fingerprints != before.Fingerprints {
+		t.Fatal("fresh refs lost cache normalization", err)
+	}
 	changed, sameStore := execute("--download-cache")
 	if sameStore != path || changed.Receipt.Identity.Tree == first.Receipt.Identity.Tree {
 		t.Fatal("source change lost full identity or invalidated downloads")

@@ -36,6 +36,7 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 	var downloadCache, coldCache bool
 	cmd := &cobra.Command{Use: "verify", Short: "Verify committed changes locally and save an advisory receipt", Args: cobra.NoArgs}
 	report := addReportingFlags(cmd)
+	cmd.AddCommand(newCapabilityCmd())
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		if !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$`).MatchString(repository) || base == "" || (profile == "" && !verificationDaemon(daemon)) || (profile != "" && cmd.Flags().Changed("daemon")) {
 			return fmt.Errorf("verify requires --repository owner/name, --base and either --profile or --daemon with a dedicated Unix socket or loopback TCP endpoint")
@@ -103,7 +104,7 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 				if err == nil {
 					built, err = applyVerificationCache(prepared.Path, filepath.Join(cache, "bellows", "downloads"), downloadCache, coldCache, built)
 				}
-				current = built.Current
+				current = currentWithRefs(root, base, head, built.Current)
 				return built, err
 			},
 		})
@@ -117,6 +118,10 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 				runErr = errors.Join(runErr, reportErr)
 				if reportErr == nil {
 					fmt.Fprintf(cmd.ErrOrStderr(), "updated advisory bellows/verify for %s %s\n", repository, out.Receipt.Identity.Head)
+					if watchErr := report.watch(ctx, reporter); watchErr != nil {
+						out.State = v.Error
+						runErr = errors.Join(runErr, watchErr)
+					}
 				}
 			}
 		}

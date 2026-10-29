@@ -283,6 +283,15 @@ Failures, cancellation, unsupported inputs, and receipt-write errors return a
 nonzero exit status. Local receipts record observations and do not authenticate
 the execution of hostile code.
 
+To observe a reported run after it finishes, add `--watch-advisory 5m` to
+`verify --report --trust-workstation --pull-request <number>`. The watch is
+bounded to one hour and defaults to off. Stale inputs produce an advisory error
+on the original head and a nonzero exit; the saved receipt remains historical.
+
+`bellows verify capabilities --repository owner/project --branch main` inspects
+read-only GitHub API availability. It always reports advisory mode and never
+certifies merge authorization. See [freshness and limitations](design/advisory-freshness.md).
+
 ## `bellows completion`
 
 Generate shell completion scripts.
