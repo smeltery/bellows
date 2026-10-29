@@ -65,3 +65,7 @@ platform, or inputs are not interchangeable. All checks run for the selected
 profile; workflow path filters do not omit native required checks.
 
 See [security](security.md) and [local differences](local-differences.md) for the limits of workstation evidence.
+
+On cancellation, native checks receive SIGTERM and have up to five seconds to
+release owned resources before Bellows kills the remaining process group.
+Commands that manage services should handle that signal and await their cleanup.
