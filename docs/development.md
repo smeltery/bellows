@@ -39,17 +39,18 @@ Bellows hooks in another project, use the [user hook guide](pre-commit.md).
 ## Keep changes small
 
 `scripts/budget.ts` enforces nonblank line budgets for production Go and custom
-check scripts (4,700 and 80 lines respectively). Tests are excluded so coverage is not discouraged. Prefer shared
+check scripts (5,100 and 80 lines respectively). Tests are excluded so coverage is not discouraged. Prefer shared
 Make targets and existing tools over new wrappers. Any budget increase should
 include a rationale in the pull request.
 
-The 4,700-line production budget provides a measured foundation allowance above
-our 3,376-line baseline: roughly 150 contract, 90 Git-discovery, 200 worktree,
-370 receipt-validation, 270 selection, and 160 native Flox adapter lines. Strict
-receipt validation and complete prerequisite selection exceeded their initial
-estimates. The allowance covers their combined integration, including the Flox
-adapter; reporting requires a separately reviewed, measured adjustment. This
-remains a hard check, not a per-branch exemption.
+The 5,100-line production budget covers measured verification and reporting
+integration: 4,409 foundation lines, roughly 170 native Flox adapter lines,
+140 status-transport lines, and 190 reporting-policy lines. Their estimated
+combined 4,909 lines leave a small integration margin. Strict receipt validation
+and complete prerequisite selection exceeded their initial estimates; this
+allowance reflects implemented scope. Services and CLI orchestration need a
+separately reviewed, measured adjustment. This remains a hard check, not a
+per-branch exemption.
 
 Markdown uses markdownlint; all fenced Mermaid diagrams must parse with Mermaid.
 Bun dependencies are pinned in `package.json` and `bun.lock`. After a toolchain
