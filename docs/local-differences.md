@@ -84,3 +84,7 @@ docker:
 This can help images that are amd64-only, but it can also expose action-specific
 issues under emulation. Add it only when the repository needs amd64 containers
 locally.
+
+Exact-commit verification currently rejects Git submodule inputs. Detached
+checkouts do not automatically materialize their contents, so a receipt must not
+claim a complete tested tree while those inputs are absent.
