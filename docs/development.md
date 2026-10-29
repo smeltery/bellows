@@ -47,3 +47,11 @@ Markdown uses markdownlint; all fenced Mermaid diagrams must parse with Mermaid.
 Bun dependencies are pinned in `package.json` and `bun.lock`. After a toolchain
 change, update the Flox lockfile with `flox install` or `flox upgrade`, commit it,
 and run the checks again. Do not hand-edit the lockfile.
+
+## Git isolation in hooks
+
+Contributor hooks clear Git-local environment variables before running checks,
+so tests that create temporary repositories cannot target the caller's worktree.
+`make test` also ignores global and system Git configuration for its child
+processes, avoiding user signing prompts and global hooks in fixtures. These
+settings do not modify your Git configuration or affect normal commits.

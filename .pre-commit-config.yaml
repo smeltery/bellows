@@ -3,14 +3,16 @@ repos:
     hooks:
       - id: validate
         name: Validate docs, budgets, and CI configuration
-        entry: flox activate -- make validate
+        entry: >-
+          sh -c 'unset $(git rev-parse --local-env-vars); exec flox activate -- make validate'
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
       - id: check
         name: Run shared CI checks
-        entry: flox activate -- make check
+        entry: >-
+          sh -c 'unset $(git rev-parse --local-env-vars); exec flox activate -- make check'
         language: system
         pass_filenames: false
         always_run: true
