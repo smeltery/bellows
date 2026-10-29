@@ -75,6 +75,15 @@ func (e Executor) Toolchain(ctx context.Context, root string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return e.ToolchainForLock(ctx, lock)
+}
+
+// ToolchainForLock rereads the host executable using immutable committed lock data.
+func (e Executor) ToolchainForLock(ctx context.Context, lock []byte) (string, error) {
+	if !json.Valid(lock) {
+		return "", fmt.Errorf("flox lock is not valid JSON")
+	}
+	var err error
 	cmd := exec.CommandContext(ctx, e.binary(), "--version")
 	cmd.Env, err = environment(nil)
 	if err != nil {
