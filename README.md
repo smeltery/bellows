@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/smeltery/bellows/actions/workflows/ci.yml/badge.svg)](https://github.com/smeltery/bellows/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/smeltery/bellows)](https://github.com/smeltery/bellows/releases)
-[![Go](https://img.shields.io/badge/Go-1.24%2B-00ADD8?logo=go)](go.mod)
+[![Go](https://img.shields.io/badge/Go-1.25%2B-00ADD8?logo=go)](go.mod)
 [![Flox](https://img.shields.io/badge/dev-Flox-purple)](.flox/env/manifest.toml)
 [![Bun](https://img.shields.io/badge/checks-Bun-black?logo=bun)](package.json)
 [![License](https://img.shields.io/badge/license-PolyForm_Shield-blue)](LICENSE)
