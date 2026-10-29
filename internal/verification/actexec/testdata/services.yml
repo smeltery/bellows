@@ -10,8 +10,9 @@ jobs:
         image: postgres:17-alpine
         env:
           POSTGRES_PASSWORD: synthetic-only
-        ports: [5432]
+        ports: ["5432"]
         options: >-
+          --label bellows.fixture.postgres=1
           --health-cmd "pg_isready -U postgres"
           --health-interval 1s --health-timeout 3s --health-retries 30
     defaults:
@@ -19,13 +20,13 @@ jobs:
         shell: sh
     steps:
       - name: Service DNS, readiness, SQL and child Docker
-        env:
-          HOST_PORT: ${{ job.services.postgres.ports[5432] }}
         run: |
           docker version
           network=$(docker inspect -f '{{range $name, $value := .NetworkSettings.Networks}}{{$name}}{{end}}' "$HOSTNAME")
           docker run --rm --network "$network" postgres:17-alpine pg_isready -h postgres -U postgres
           docker run --rm --network "$network" -e PGPASSWORD=synthetic-only postgres:17-alpine psql -h postgres -U postgres -c 'SELECT 1'
+          postgres=$(docker ps -q --filter label=bellows.fixture.postgres=1)
+          HOST_PORT=$(docker inspect -f '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}' "$postgres")
           docker run --rm --network host postgres:17-alpine pg_isready -h 127.0.0.1 -p "$HOST_PORT" -U postgres
           case "$BELLOWS_FIXTURE_MODE" in
             fail) exit 7 ;;
