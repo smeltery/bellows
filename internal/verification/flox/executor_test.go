@@ -151,3 +151,9 @@ func TestToolchainCancellation(t *testing.T) {
 		t.Fatal("version probe did not stop promptly")
 	}
 }
+
+func TestToolchainForLockRejectsInvalidJSON(t *testing.T) {
+	if _, err := (Executor{}).ToolchainForLock(context.Background(), []byte("invalid")); err == nil {
+		t.Fatal("accepted malformed committed lock")
+	}
+}
