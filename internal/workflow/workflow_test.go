@@ -140,6 +140,32 @@ func TestLoadRealisticWorkflowFacts(t *testing.T) {
 	}
 }
 
+func TestVerificationServiceFacts(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "services.yml")
+	data := `on:
+  pull_request:
+  push:
+jobs:
+  test:
+    if: inputs.enabled
+    uses: org/repo/.github/workflows/test.yml@main
+    container: docker:28-cli
+    services:
+      postgres:
+        image: postgres:17-alpine
+`
+	if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	wf, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(wf.Events, []string{"pull_request", "push"}) || !reflect.DeepEqual(wf.Jobs["test"].Images, []string{"docker:28-cli", "postgres:17-alpine"}) || wf.Jobs["test"].If == "" || wf.Jobs["test"].Uses == "" {
+		t.Fatalf("%+v", wf)
+	}
+}
+
 func TestUnsupportedMatrixFact(t *testing.T) {
 	for name, matrix := range map[string]string{
 		"absent": "", "static": "{os: [linux, mac], version: [1, 2]}",
