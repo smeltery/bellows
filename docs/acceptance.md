@@ -1,10 +1,11 @@
 # Advisory verification acceptance audit
 
-**Draft; acceptance remains pending.** This audit covers Bellows `e92c00b`
-(released as `v0.3.14`) on 2026-10-29. A merged component and its synthetic tests
+**Advisory MVP evidence accepted.** This audit covers Bellows `28eed73`
+(the previous release is `v0.3.14`) on 2026-10-29. A merged component and its synthetic tests
 do not establish complete parity for a consuming private repository.
-The acceptance decision waits for the private rollout (NIC-68) and public user
-documentation (NIC-69), with dependency-ordered merges and approvals still pending.
+All private prerequisite PRs and public user documentation are merged. The
+final integrated private profile passed all required checks; the public CI
+checkpoint below records the audited Bellows revision.
 
 The agreed release provides advisory local verification while retaining hosted
 CI. It neither changes required GitHub contexts nor authorizes merges. Local
@@ -51,13 +52,13 @@ the detailed evidence; no private source or logs are reproduced here.
 | NIC-61: native profiles | [PR 20](https://github.com/smeltery/bellows/pull/20), `346402b` | Merged. Config/schema and end-to-end profile tests cover strict fields, graph validity, explicit executor choice, failure propagation and reproducible identity. Existing package managers remain authoritative. |
 | NIC-62: download/layer caches | [PR 26](https://github.com/smeltery/bellows/pull/26), `6fe9556` | Merged. Actual npm cold/warm/corruption evidence and real Linux BuildKit hit/equivalence tests; concurrent leases, bounded pruning and repository binding. Installed dependencies and successful test results are never reused. |
 | NIC-63: prepare once | [Private PR 75](https://github.com/smeltery/nightshift/pull/75), `f25ac8b` | Merged. Private preparation identity and regression tests retain independent hosted shard commands. Final consuming profile must run preparation regressions as well as prepared shards. |
-| NIC-64: private configuration/hooks | [Private PR 76](https://github.com/smeltery/nightshift/pull/76) | Verified, pending merge at `5af5f46`. Private setup/hooks and the complete profile are reviewed; hosted jobs remain. |
-| NIC-65: complete private parity | [Private PR 79](https://github.com/smeltery/nightshift/pull/79), `9b01273` | Verified on Linux, pending merge. Eight required checks passed cold/warm; four injected failures, real cancellation, two concurrent passes, sentinel preservation and owned cleanup are recorded privately. |
+| NIC-64: private configuration/hooks | [Private PR 76](https://github.com/smeltery/nightshift/pull/76) | Merged at `b4677e3`; reviewed source was `5af5f46`. Private setup/hooks and the complete profile are reviewed; hosted jobs remain. |
+| NIC-65: complete private parity | [Private PR 79](https://github.com/smeltery/nightshift/pull/79), `fd9ee20` | Merged after Linux verification at `9b01273`. Eight required checks passed cold/warm; four injected failures, real cancellation, two concurrent passes, sentinel preservation and owned cleanup are recorded privately. |
 | NIC-66: stale advisory results | [PR 25](https://github.com/smeltery/bellows/pull/25), `901c499` | Merged, with current-ref correction in PR 28. Identity/ref movement, superseded attempts, bounded watch and capability tests. Read-only capability reporting never claims merge authorization or changes repository settings. |
-| NIC-67: measured performance | [Private PR 80](https://github.com/smeltery/nightshift/pull/80), `7e91d50` | Verified, pending merge. Complete-coverage measurements and provenance remain private. No avoided hosted cost is claimed while hosted workflows remain enabled. |
-| NIC-68: advisory rollout | [Private PR 81](https://github.com/smeltery/nightshift/pull/81), `6b667c2` | Verified, pending merge. Six live advisory cases and real Lefthook adoption/rollback passed; retained hosted triggers and infrastructure limitations are recorded privately. |
-| NIC-69: user documentation | [PR 22](https://github.com/smeltery/bellows/pull/22) | Pending merge. Public setup, receipt inspection, intentional reporting, stale recovery and permission guidance must match shipped commands and pass documentation checks. |
-| NIC-70: acceptance | This audit | Pending dependency-ordered private merges, applicable CI exceptions and NIC-69 merge. Local evidence is complete; record merged versions before accepting. |
+| NIC-67: measured performance | [Private PR 80](https://github.com/smeltery/nightshift/pull/80), `cafe6ae` | Merged after verification at `7e91d50`. Complete-coverage measurements and provenance remain private. No avoided hosted cost is claimed while hosted workflows remain enabled. |
+| NIC-68: advisory rollout | [Private PR 81](https://github.com/smeltery/nightshift/pull/81), `5081f1d` | Merged after verification at `6b667c2`. Six live advisory cases and real Lefthook adoption/rollback passed; retained hosted triggers and infrastructure limitations are recorded privately. |
+| NIC-69: user documentation | [PR 22](https://github.com/smeltery/bellows/pull/22), `28eed73` | Merged after green checks. Public setup, receipt inspection, intentional reporting, stale recovery and permission guidance match shipped commands. |
+| NIC-70: acceptance | This audit | Accepted advisory MVP evidence: prerequisites merged, final private integration passed, public validation recorded below. Hosted billing exceptions and trust limitations remain explicit. |
 | NIC-71: successful-result reuse | Post-acceptance optimization | Deferred by design. Not implemented or enabled in this release. Requires independent provenance, complete identity/plan invalidation, expiry and failure tests; it must not block the advisory MVP. |
 
 ## Original repository improvements
@@ -77,16 +78,16 @@ No source-budget increase is introduced by this report.
 isolates Git fixture environments in contributor hooks. This prevents temporary
 repository tests from inheriting a caller's real index, refs or signing setup.
 
-[Private PR 77](https://github.com/smeltery/nightshift/pull/77) (`65de7a9`,
-NIC-73) remains in review. Its engine shutdown fix preserves `CI=true`, uses a
+[Private PR 77](https://github.com/smeltery/nightshift/pull/77) (`76b60b8`,
+NIC-73) is merged after review of `65de7a9`. Its engine shutdown fix preserves `CI=true`, uses a
 version-matched dependency patch and prevents cancellation from spawning a
 replacement process after cleanup. The exact source tree passed the private
 14-step verifier and the affected real PostgreSQL integration tests. Hosted
 checks were prevented from starting by billing restrictions; they are not
-represented as green. Merge approval remains required despite completed local consuming-profile evidence.
+represented as green. The approved private CI exception was recorded before merging.
 
 Private configuration PR 76, parity PR 79, performance PR 80 and rollout PR 81
-have completed review and Linux validation at the revisions above. The required
+are merged after review and Linux validation at the revisions above. The required
 eight-check profile passed cold and warm runs. Four representative injected
 failures, real cancellation and two concurrent full passes were observed, with
 sentinel preservation and empty owned-resource cleanup. The private receipt
@@ -112,14 +113,14 @@ invalidation. Persisted receipts and exact identities/results were independently
 checked. This minimal transport exercise establishes advisory lifecycle behavior;
 it does not establish the full private services/shards/images parity matrix.
 Real Lefthook adoption/rollback also passed. The rollout record is complete in
-private PR 81; its merge and applicable approvals remain pending.
+merged private PR 81, with applicable private CI exceptions approved.
 
 ## Public evidence and invariants
 
-[Main CI run 40958573358](https://github.com/smeltery/bellows/actions/runs/40958573358)
-passed on `e92c00b`: Linux/macOS release checks and the Linux real-service/cache
-job. [Release](https://github.com/smeltery/bellows/actions/runs/40959003183) and
-[smoke](https://github.com/smeltery/bellows/actions/runs/40959357491) also passed
+[Main CI run 40975299054](https://github.com/smeltery/bellows/actions/runs/40975299054)
+passed on `28eed73`: Linux/macOS release checks and the Linux real-service/cache
+job. The previous released code baseline `e92c00b` passed [release](https://github.com/smeltery/bellows/actions/runs/40959003183) and
+[smoke](https://github.com/smeltery/bellows/actions/runs/40959357491) checks
 for [v0.3.14](https://github.com/smeltery/bellows/releases/tag/v0.3.14), including
 archive, Homebrew and Go installation checks.
 The shared gate runs Markdown/Mermaid validation, workflow/release validation,
@@ -171,17 +172,22 @@ private consumer retains its hosted lint, shard, engine integration and image
 build jobs and their triggers. Adoption must not silently remove an existing
 required context or change repository privacy, billing or branch settings.
 
-## Remaining acceptance steps
+## Final integration and acceptance
 
-1. Obtain applicable private CI exceptions and merge the reviewed private fixes,
-   configuration, parity, performance and rollout PRs in dependency order.
-   Hosted billing failures remain infrastructure restrictions, not green tests.
-2. Record resulting merge revisions and verify that the reviewed evidence still
-   corresponds to the integrated source. Preserve the private evidence matrix
-   and its explicit Linux support boundary.
-3. Merge public user documentation, confirm final integrated checks, update this
-   matrix and make the acceptance decision. Hosted triggers and required
-   contexts remain unchanged; no direct UI/API merge enforcement is certified.
+The approved private CI exceptions preceded dependency-ordered merges of PRs
+77, 76, 79, 80 and 81. Hosted checks remain enabled; billing restrictions were
+recorded separately from the complete local execution evidence. Public user
+documentation PR 22 is also merged after green checks.
 
-This report remains a draft until those steps finish. Successful-result caching
-is not implemented and starts only after the advisory MVP is accepted.
+The exact integrated private head `5081f1d` passed the complete required profile
+against base `f25ac8b`, with tree `ee5ea087`. All eight required checks passed,
+including configuration harness tests, the canonical verifier, real database and
+callback/readiness tests, and both required image builds. The receipt was
+persisted, the source remained clean and no owned resources remained. Detailed
+identity, receipt and measurement evidence stays in the private archive.
+
+This accepts advisory local verification, not protected merge authority or
+universal platform parity. Hosted CI stays enabled and the documented private
+billing exceptions do not imply successful hosted execution. Successful-result
+caching is not implemented; its separate work starts only after this acceptance
+is merged.
