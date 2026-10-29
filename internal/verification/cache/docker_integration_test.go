@@ -34,12 +34,21 @@ func TestDockerCacheIntegration(t *testing.T) {
 		return strings.TrimSpace(out.String()), log.String()
 	}
 	name := "bellows-build-cache-" + strings.ToLower(rand.Text())
-	id, _ := docker("run", "--detach", "--privileged", "--name", name, "--label", "bellows.fixture="+name, "--env", "DOCKER_TLS_CERTDIR=", "--publish", "127.0.0.1::2375", "docker:28-dind")
+	id, _ := docker("create", "--privileged", "--name", name, "--label", "bellows.fixture="+name, "--env", "DOCKER_TLS_CERTDIR=", "--publish", "127.0.0.1::2375", "docker:28-dind")
+	var volumes []string
 	t.Cleanup(func() {
-		if output, err := exec.Command("docker", "rm", "--force", id).CombinedOutput(); err != nil {
+		if output, err := exec.Command("docker", "rm", "--force", "--volumes", id).CombinedOutput(); err != nil {
 			t.Errorf("owned daemon cleanup: %v %s", err, output)
 		}
+		for _, volume := range volumes {
+			if err := exec.Command("docker", "volume", "inspect", volume).Run(); err == nil {
+				t.Errorf("owned anonymous volume remains: %s", volume)
+			}
+		}
 	})
+	docker("start", id)
+	volumeNames, _ := docker("inspect", "--format", `{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name}}{{end}}{{end}}`, id)
+	volumes = strings.Fields(volumeNames)
 	port, _ := docker("port", id, "2375/tcp")
 	endpoint := "tcp://" + port
 	for {
