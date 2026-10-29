@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/smeltery/bellows/internal/reporting/freshness"
 	"github.com/smeltery/bellows/internal/reporting/github"
 	"github.com/smeltery/bellows/internal/reporting/policy"
 	v "github.com/smeltery/bellows/internal/verification"
@@ -67,22 +68,56 @@ func (r *Reporter) Finish(ctx context.Context, completed v.Receipt) error {
 }
 func (r *Reporter) publish(ctx context.Context, evidence v.Receipt, desired v.State, status github.State) error {
 	guard := func(ctx context.Context, _ v.Identity) error {
-		decision := r.policy.Authorize(ctx, r.run, evidence, desired, func(ctx context.Context) (v.Identity, error) {
-			current, err := r.current(ctx)
-			if err != nil || current != evidence.Identity {
-				return v.Identity{}, fmt.Errorf("current local verification identity changed")
-			}
-			head, base, err := r.api.PullIdentity(ctx, r.repository, r.pull)
-			if err != nil {
-				return v.Identity{}, err
-			}
-			current.Head, current.Base = head, base
-			return current, nil
-		})
+		decision := r.policy.Authorize(ctx, r.run, evidence, desired, r.resolve(evidence.Identity))
 		if !decision.Allowed {
 			return fmt.Errorf("advisory publication denied: %s", decision.Reason)
 		}
 		return nil
 	}
 	return r.api.Publish(ctx, github.Update{Identity: evidence.Identity, State: status}, guard)
+}
+
+func (r *Reporter) resolve(expected v.Identity) policy.Resolver {
+	return func(ctx context.Context) (v.Identity, error) {
+		current, err := r.current(ctx)
+		if err != nil {
+			return v.Identity{}, err
+		}
+		head, base, err := r.api.PullIdentity(ctx, r.repository, r.pull)
+		if err != nil {
+			return v.Identity{}, err
+		}
+		if current.Head == expected.Head {
+			current.Head = head
+		}
+		if current.Base == expected.Base {
+			current.Base = base
+		}
+		return current, nil
+	}
+}
+
+// Recheck can only downgrade the completed run owned by this reporter.
+func (r *Reporter) Recheck(ctx context.Context) (freshness.Observation, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	unknown := freshness.Observation{State: "unknown", Changed: []string{}}
+	if r.run == nil {
+		return unknown, errors.New("reporting run never started")
+	}
+	owned := r.run
+	evidence, err := owned.Receipt()
+	if err != nil || evidence.CompletedAt == nil {
+		return unknown, errors.New("reporting run is not complete")
+	}
+	current := r.resolve(evidence.Identity)
+	observation := freshness.Check(ctx, evidence.Identity, current)
+	if observation.State == "unknown" {
+		return observation, freshness.ErrUnknown
+	}
+	if observation.State == "current" {
+		return observation, nil
+	}
+	err = freshness.Invalidate(ctx, r.api, evidence.Identity, current, func() bool { return r.run == owned })
+	return observation, errors.Join(freshness.ErrStale, err)
 }
