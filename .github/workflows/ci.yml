@@ -23,7 +23,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -31,7 +31,7 @@ jobs:
       - uses: flox/activate-action@6abc249840d01f0c59473f21ba74821564d320b7
         with:
           command: make release-check
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         continue-on-error: true
         if: ${{ env.ACT != 'true' }}
         with:
