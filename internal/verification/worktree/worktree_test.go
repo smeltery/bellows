@@ -113,6 +113,14 @@ func TestPrepareMergePreservesDirtyCheckoutAndCleansOnlyOwnedPaths(t *testing.T)
 
 func TestPrepareHeadOnlyAndIdenticalRefs(t *testing.T) {
 	opts, head, _ := fixture(t)
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	opts.TempDir, err = filepath.Rel(cwd, opts.TempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	opts.Mode = verification.ModeHead
 	run, err := Prepare(context.Background(), opts)
 	if err != nil {

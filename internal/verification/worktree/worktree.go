@@ -86,7 +86,11 @@ func Prepare(ctx context.Context, opts Options) (_ *Run, err error) {
 	if opts.TempDir == "" {
 		opts.TempDir = os.TempDir()
 	}
-	temp, err := filepath.EvalSymlinks(opts.TempDir)
+	temp, err := filepath.Abs(opts.TempDir)
+	if err != nil {
+		return nil, &PrepareError{verification.Invalid, err}
+	}
+	temp, err = filepath.EvalSymlinks(temp)
 	if err != nil {
 		return nil, &PrepareError{verification.Invalid, err}
 	}
