@@ -67,8 +67,8 @@ checks and automated tested releases. The repository has a license, a concise
 README with technology/status badges and links into split user documentation,
 validated Mermaid diagrams, pinned Bun documentation tooling, and contributor
 hooks invoking the same Make targets as CI. Bellows is public and its audited
-main CI, release and smoke runs are green. Exact license-content equality is a
-separate private audit check; acceptance still requires its recorded confirmation.
+main CI, release and smoke runs are green. Exact license-content equality was privately confirmed; the local SHA-256 is
+`5fce31b74a03790580196c1324b975d086c4281e9f9260123ae63ae09c63be11`.
 No source-budget increase is introduced by this report.
 
 ## Supporting fixes and private evidence checkpoint
