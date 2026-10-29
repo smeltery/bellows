@@ -17,12 +17,13 @@ type Workflow struct {
 }
 
 type Job struct {
-	RunsOn      []string
-	Needs       []string
-	Steps       []Step
-	Matrix      map[string][]string
-	Permissions map[string]string
-	Environment []string
+	RunsOn            []string
+	Needs             []string
+	Steps             []Step
+	Matrix            map[string][]string
+	UnsupportedMatrix bool
+	Permissions       map[string]string
+	Environment       []string
 }
 
 type Step struct {
@@ -108,12 +109,13 @@ func Load(path string) (Workflow, error) {
 			steps = append(steps, Step(step))
 		}
 		wf.Jobs[id] = Job{
-			RunsOn:      nodeStrings(rawJob.RunsOn),
-			Needs:       nodeStrings(rawJob.Needs),
-			Steps:       steps,
-			Matrix:      matrixStrings(rawJob.Strategy.Matrix),
-			Permissions: mapStrings(rawJob.Permissions),
-			Environment: environmentStrings(rawJob.Environment),
+			RunsOn:            nodeStrings(rawJob.RunsOn),
+			Needs:             nodeStrings(rawJob.Needs),
+			Steps:             steps,
+			Matrix:            matrixStrings(rawJob.Strategy.Matrix),
+			UnsupportedMatrix: unsupportedMatrix(rawJob.Strategy.Matrix),
+			Permissions:       mapStrings(rawJob.Permissions),
+			Environment:       environmentStrings(rawJob.Environment),
 		}
 	}
 	return wf, nil
@@ -265,4 +267,27 @@ func matrixValuesForExpression(expr string, matrix map[string][]string) []string
 
 func isExpression(value string) bool {
 	return strings.Contains(value, "${{")
+}
+
+func unsupportedMatrix(node yaml.Node) bool {
+	if node.Kind == 0 {
+		return false
+	}
+	if node.Kind != yaml.MappingNode || len(node.Content) == 0 {
+		return true
+	}
+	seen := map[string]bool{}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		key, values := node.Content[i].Value, node.Content[i+1]
+		if key == "" || key == "include" || key == "exclude" || seen[key] || values.Kind != yaml.SequenceNode || len(values.Content) == 0 {
+			return true
+		}
+		seen[key] = true
+		for _, value := range values.Content {
+			if value.Kind != yaml.ScalarNode || value.Tag == "!!null" || value.Value == "" || isExpression(value.Value) {
+				return true
+			}
+		}
+	}
+	return false
 }
