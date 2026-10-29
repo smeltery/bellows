@@ -197,11 +197,11 @@ func TestDiscoverIncludesIgnoredSubmoduleChanges(t *testing.T) {
 	git(t, root, "config", "-f", ".gitmodules", "submodule.dependency.ignore", "all")
 	base := commit(t, root)
 	git(t, root, "config", "diff.ignoreSubmodules", "all")
-	commit(t, filepath.Join(root, "dependency"))
+	dependencyHead := commit(t, filepath.Join(root, "dependency"))
 	for _, scope := range []Scope{WorkingTree, Staged, BaseHead} {
 		opts := Options{Scope: scope}
 		if scope == Staged {
-			git(t, root, "add", "dependency")
+			git(t, root, "update-index", "--cacheinfo", "160000,"+dependencyHead+",dependency")
 		}
 		if scope == BaseHead {
 			commit(t, root)
