@@ -39,9 +39,14 @@ Bellows hooks in another project, use the [user hook guide](pre-commit.md).
 ## Keep changes small
 
 `scripts/budget.ts` enforces nonblank line budgets for production Go and custom
-check scripts (3,600 and 80 lines respectively). Tests are excluded so coverage is not discouraged. Prefer shared
+check scripts (4,300 and 80 lines respectively). Tests are excluded so coverage is not discouraged. Prefer shared
 Make targets and existing tools over new wrappers. Any budget increase should
 include a rationale in the pull request.
+
+The 4,300-line production budget reserves a bounded foundation envelope above
+the 3,376-line baseline: roughly 150 contract, 90 Git-discovery, 200 worktree,
+300 receipt-validation and 150 selection lines. It remains a hard check; native
+adapters and reporting require separately reviewed, measured adjustments.
 
 Markdown uses markdownlint; all fenced Mermaid diagrams must parse with Mermaid.
 Bun dependencies are pinned in `package.json` and `bun.lock`. After a toolchain

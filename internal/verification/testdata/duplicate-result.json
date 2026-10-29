@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "run_id": "synthetic-run",
+  "started_at": "2026-01-01T12:00:00Z",
+  "completed_at": "2026-01-01T12:00:01Z",
+  "identity": {
+    "repository": "example/project",
+    "head": "1111111111111111111111111111111111111111",
+    "base": "2222222222222222222222222222222222222222",
+    "tree": "3333333333333333333333333333333333333333",
+    "mode": "merge",
+    "executor": "act",
+    "platform": "linux/amd64",
+    "fingerprints": {
+      "workflow": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "config": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "policy": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "dependencies": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "toolchain": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "environment": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "input": "ready",
+  "checks": [
+    {
+      "id": "ci.yml/test",
+      "required": true,
+      "needs": []
+    }
+  ],
+  "results": [
+    {
+      "id": "ci.yml/test",
+      "state": "passed",
+      "exit_code": 0,
+      "duration_ms": 1000
+    },
+    {
+      "id": "ci.yml/test",
+      "state": "passed",
+      "exit_code": 0,
+      "duration_ms": 1000
+    }
+  ]
+}
