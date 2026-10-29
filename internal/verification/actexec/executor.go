@@ -4,6 +4,7 @@ package actexec
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -101,6 +102,12 @@ func (e *Executor) empty(ctx context.Context) error {
 
 // Toolchain fingerprints pre-pulled immutable image IDs; it never pulls mutable tags.
 func (e *Executor) Toolchain(ctx context.Context, images []string) (string, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.closed {
+		return "", fmt.Errorf("executor is closed")
+	}
+	e.fingerprint = ""
 	cmd := exec.CommandContext(ctx, "act", "--version")
 	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + e.cache}
 	version, err := cmd.Output()
@@ -125,9 +132,6 @@ func (e *Executor) Toolchain(ctx context.Context, images []string) (string, erro
 		}
 		e.images[name] = id
 		material += "\n" + name + "=" + id
-	}
-	for label, image := range e.cfg.Runner.Map {
-		e.cfg.Runner.Map[label] = e.images[image]
 	}
 	e.fingerprint = fmt.Sprintf("%x", sha256.Sum256([]byte(material)))
 	return e.fingerprint, nil
@@ -225,7 +229,12 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 			}
 		}
 	}
-	args, err := act.Args(act.Options{Workflow: request.Workflow, Job: request.Job, Config: e.cfg})
+	pinned := *e.cfg
+	pinned.Runner.Map = map[string]string{}
+	for label, image := range e.cfg.Runner.Map {
+		pinned.Runner.Map[label] = e.images[image]
+	}
+	args, err := act.Args(act.Options{Workflow: request.Workflow, Job: request.Job, Config: &pinned})
 	if err != nil {
 		return result, err
 	}
@@ -241,16 +250,28 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 		}
 		args = append(args, "--matrix", key+":"+value)
 	}
+	environment := map[string]string{}
 	for _, entry := range request.Env {
-		name, _, _ := strings.Cut(entry, "=")
-		flag := "--env"
+		name, value, _ := strings.Cut(entry, "=")
 		if slices.Contains(e.cfg.Secrets.Allow, name) {
-			flag = "--secret"
+			args = append(args, "--secret", name)
+		} else {
+			environment[name] = value
 		}
-		args = append(args, flag, name)
 	}
+	data, err := json.Marshal(environment)
+	if err != nil {
+		return result, err
+	}
+	envPath := filepath.Join(e.cache, "environment.yml")
+	if err = os.WriteFile(envPath, data, 0600); err != nil {
+		return result, err
+	}
+	defer os.Remove(envPath)
+	args = append(args, "--env-file", envPath)
+
 	args = append(args, "--rm", "--pull=false", "--no-cache-server", "--action-cache-path", e.cache, "--container-daemon-socket", "/var/run/docker.sock")
-	for _, flag := range []string{"--env-file", "--secret-file", "--input-file", "--var-file"} {
+	for _, flag := range []string{"--secret-file", "--input-file", "--var-file"} {
 		args = append(args, flag, os.DevNull)
 	}
 	cmd := exec.CommandContext(ctx, "act", args...)
@@ -260,9 +281,19 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 	cmd.Stdout, cmd.Stderr = request.Stdout, request.Stderr
 	cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
 	cmd.WaitDelay = 10 * time.Second
+	if _, err = e.docker(ctx, "volume", "create", "--label", "bellows.owner="+filepath.Base(e.lease), "act-toolcache"); err != nil {
+		return result, err
+	}
 	runErr := cmd.Run()
 	cleanupCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+	owner, inspectErr := e.docker(cleanupCtx, "volume", "inspect", "act-toolcache", "--format", `{{index .Labels "bellows.owner"}}`)
+	if inspectErr != nil || owner != filepath.Base(e.lease) {
+		return result, fmt.Errorf("act toolcache ownership changed")
+	}
+	if _, err = e.docker(cleanupCtx, "volume", "rm", "act-toolcache"); err != nil {
+		return result, err
+	}
 	if err = e.empty(cleanupCtx); err != nil {
 		return result, err
 	}

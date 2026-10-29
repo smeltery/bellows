@@ -45,11 +45,14 @@ is not proof that arbitrary network-dependent workflows are reproducible.
 `Run` accepts the selected workflow, job and exact static matrix. Conditional,
 reusable, absent and empty jobs report unsupported. Reporting tokens and execution
 control variables cannot enter the child environment. Explicit allowed variables
-are passed by name; configured secret names use act's secret masking.
+use a temporary private environment file, removed after execution; configured
+secret names are passed by name and use act's secret masking.
 
 Call `Close` after execution. act receives `--rm`; cancellation sends an interrupt
 before a bounded forced stop. Bellows verifies that the daemon is empty afterward.
-It never prunes Docker resources or deletes unexplained container IDs. Leftovers
+It precreates act's known `act-toolcache` volume with its lease-owner label and
+removes only that exact volume after checking the label. It never prunes Docker
+resources or deletes unexplained container IDs. Leftovers
 produce an error and retain the lease. The operator must then dispose of the owned
 daemon, inspect the failure, and remove its stale lease. This also covers hard
 process termination. Ordinary success releases only the executor's own temporary
@@ -71,6 +74,11 @@ PostgreSQL uses dynamic ports and a readiness probe. The job checks service DNS,
 SQL, child Docker execution and Linux host-network reachability. Cleanup targets
 only the exact outer container IDs created by the test, including failure paths.
 The fixture contains only synthetic credentials and no private project content.
+
+act v0.2.88 did not populate `job.services.postgres.ports[5432]` in the real
+fixture. The synthetic job resolves its dynamic port through Docker inspect;
+workflows depending on that GitHub context require adaptation and cannot claim
+unchanged parity. The executor does not rewrite their expressions.
 
 The Ubuntu CI service job runs this test. macOS/Docker Desktop parity has not been
 measured; a missing local Docker daemon is an explicit limitation, not a passing
