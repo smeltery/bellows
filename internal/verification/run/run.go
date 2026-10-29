@@ -30,6 +30,7 @@ type Options struct {
 	Worktree       worktree.Options
 	Artifacts      string
 	Build          func(context.Context, *worktree.Run) (Plan, error)
+	Start          func(context.Context, v.Receipt) error
 	Stdout, Stderr io.Writer
 }
 type Outcome struct {
@@ -118,6 +119,16 @@ func Execute(ctx context.Context, opts Options) (out Outcome, err error) {
 	if err := pristine(ctx, checkout, expected.Tree); err != nil {
 		out.Receipt.Input = v.Dirty
 		return out, err
+	}
+	if opts.Start != nil {
+		data, _ := receipt.Encode(out.Receipt)
+		initial, copyErr := receipt.Decode(data)
+		if copyErr != nil {
+			return out, copyErr
+		}
+		if err := opts.Start(ctx, initial); err != nil {
+			return out, err
+		}
 	}
 	results := map[string]v.State{}
 	var executionErr error
