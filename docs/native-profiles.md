@@ -57,7 +57,10 @@ merge tree; use `--format json` for structured results.
 A receipt records the native executor and host platform. Its configuration and
 policy fingerprints include the selected profile name, even if two profiles
 have identical commands; the toolchain fingerprint includes the committed Flox
-lock and installed Flox version. Results from a different profile, executor,
+lock and installed Flox version. Fresh identity checks reread the host Flox
+version and fingerprint `PATH`, `HOME`, and `TMPDIR`, while retaining the
+immutable committed configuration and lock after worktree cleanup. Results
+from a different profile, executor,
 platform, or inputs are not interchangeable. All checks run for the selected
 profile; workflow path filters do not omit native required checks.
 

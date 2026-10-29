@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 	v "github.com/smeltery/bellows/internal/verification"
 	"github.com/smeltery/bellows/internal/verification/receipt"
 	verificationrun "github.com/smeltery/bellows/internal/verification/run"
+	"github.com/smeltery/bellows/internal/verification/worktree"
 )
 
 func TestNativeProfilesEndToEnd(t *testing.T) {
@@ -118,5 +120,47 @@ func TestNativeProfileRejectsAmbiguousExecutor(t *testing.T) {
 	command.SetArgs([]string{"verify", "--repository", "example/project", "--base", "main", "--profile", "native", "--daemon", "unix:///tmp/synthetic.sock"})
 	if command.Execute() == nil {
 		t.Fatal("accepted two executor selections")
+	}
+}
+
+func TestNativeCurrentRereadsHostAfterWorktreeCleanup(t *testing.T) {
+	root := verificationFixture(t, "version: 1\nprofiles: {native: {executor: flox, checks: {test: {argv: [echo]}}}}\n", "")
+	if err := os.MkdirAll(filepath.Join(root, ".flox/env"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".flox/env/manifest.lock"), []byte(`{"version":1}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	bin := t.TempDir()
+	binary := filepath.Join(bin, "flox")
+	version := func(value string) {
+		t.Helper()
+		if err := os.WriteFile(binary, []byte("#!/bin/sh\necho "+value+"\n"), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	version("flox-one")
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	plan, err := buildNativeVerificationPlan(context.Background(), "native", &worktree.Run{Path: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(root); err != nil {
+		t.Fatal(err)
+	}
+	current, err := plan.Current(context.Background())
+	if err != nil || current != plan.Identity {
+		t.Fatalf("immutable lock unavailable after cleanup: %v", err)
+	}
+	version("flox-two")
+	current, err = plan.Current(context.Background())
+	if err != nil || current.Fingerprints.Toolchain == plan.Identity.Fingerprints.Toolchain {
+		t.Fatalf("host version change hidden: %v", err)
+	}
+	version("flox-one")
+	t.Setenv("HOME", t.TempDir())
+	current, err = plan.Current(context.Background())
+	if err != nil || current.Fingerprints.Environment == plan.Identity.Fingerprints.Environment {
+		t.Fatalf("host environment change hidden: %v", err)
 	}
 }

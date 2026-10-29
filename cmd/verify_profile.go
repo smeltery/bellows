@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/smeltery/bellows/internal/changed"
@@ -43,7 +45,20 @@ func buildNativeVerificationPlan(ctx context.Context, name string, prepared *wor
 		return out, err
 	}
 	digest := func(data string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(data))) }
-	out.Identity.Fingerprints = v.Fingerprints{Workflow: digest(prepared.Identity.Tree), Dependencies: digest(prepared.Identity.Tree), Config: digest(string(canonical)), Policy: digest(string(canonical)), Environment: digest("[]")}
-	out.Identity.Fingerprints.Toolchain, err = (flox.Executor{}).Toolchain(ctx, prepared.Path)
+	out.Identity.Fingerprints = v.Fingerprints{Workflow: digest(prepared.Identity.Tree), Dependencies: digest(prepared.Identity.Tree), Config: digest(string(canonical)), Policy: digest(string(canonical))}
+	lock, err := os.ReadFile(filepath.Join(prepared.Path, ".flox/env/manifest.lock"))
+	if err != nil {
+		return out, err
+	}
+	identity := out.Identity
+	out.Current = func(ctx context.Context) (v.Identity, error) {
+		current := identity
+		environment, _ := json.Marshal(map[string]string{"PATH": os.Getenv("PATH"), "HOME": os.Getenv("HOME"), "TMPDIR": os.Getenv("TMPDIR")})
+		current.Fingerprints.Environment = digest(string(environment))
+		var err error
+		current.Fingerprints.Toolchain, err = (flox.Executor{}).ToolchainForLock(ctx, lock)
+		return current, err
+	}
+	out.Identity, err = out.Current(ctx)
 	return out, err
 }
