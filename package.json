@@ -6,8 +6,8 @@
     "budget": "bun scripts/budget.ts"
   },
   "devDependencies": {
-    "jsdom": "27.0.1",
-    "markdownlint-cli2": "0.18.1",
-    "mermaid": "11.12.0"
+    "jsdom": "30.1.3",
+    "markdownlint-cli2": "0.24.0",
+    "mermaid": "12.2.0"
   }
 }
