@@ -1,0 +1,10 @@
+pre-commit:
+  commands:
+    format:
+      run: ./format-check
+    lint:
+      run: ./lint-check
+pre-push:
+  commands:
+    bellows:
+      run: bellows run --precommit
