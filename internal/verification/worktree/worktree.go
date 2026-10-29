@@ -145,7 +145,7 @@ func (r *Run) Close() error {
 }
 
 func git(ctx context.Context, root, input string, args ...string) (string, error) {
-	options := []string{"-C", root, "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"}
+	options := []string{"-C", root, "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false", "-c", "core.sparseCheckout=false", "-c", "index.sparse=false"}
 	cmd := exec.CommandContext(ctx, "git", append(options, args...)...)
 	for _, name := range []string{"PATH", "HOME", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL"} {
 		if value, ok := os.LookupEnv(name); ok {

@@ -59,6 +59,32 @@ func fixture(t *testing.T) (Options, string, string) {
 	return Options{Root: root, Repository: "example/project", Head: "feature", Base: "main", Mode: verification.ModeMerge, TempDir: t.TempDir()}, head, base
 }
 
+func TestPrepareMaterializesFullTreeFromSparseCheckout(t *testing.T) {
+	opts, _, _ := fixture(t)
+	fixtureGit(t, opts.Root, "sparse-checkout", "set", "--no-cone", "common")
+	before := fixtureGit(t, opts.Root, "sparse-checkout", "list")
+	run, err := Prepare(context.Background(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := run.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	for _, name := range []string{"common", "feature", "base"} {
+		if _, err := os.Stat(filepath.Join(run.Path, name)); err != nil {
+			t.Fatalf("incomplete checkout: %s: %v", name, err)
+		}
+	}
+	if after := fixtureGit(t, opts.Root, "sparse-checkout", "list"); after != before {
+		t.Fatal("source sparse settings changed")
+	}
+	if _, err := os.Stat(filepath.Join(opts.Root, "feature")); !os.IsNotExist(err) {
+		t.Fatal("source sparse checkout changed")
+	}
+}
+
 func TestPrepareMergePreservesDirtyCheckoutAndCleansOnlyOwnedPaths(t *testing.T) {
 	opts, head, base := fixture(t)
 	put(t, opts.Root, "common", "staged\n")
