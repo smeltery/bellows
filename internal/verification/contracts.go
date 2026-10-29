@@ -130,6 +130,8 @@ func Evaluate(input InputState, checks []Check, results []Result) State {
 		observed[result.ID] = result
 	}
 	required := false
+	outcome := Passed
+	priority := map[State]int{Passed: 0, Pending: 1, Skipped: 2, Unsupported: 3, Cancelled: 4, Failed: 5, Error: 6}
 	for _, check := range checks {
 		result, exists := observed[check.ID]
 		if result.State == Passed {
@@ -146,12 +148,12 @@ func Evaluate(input InputState, checks []Check, results []Result) State {
 		if !exists {
 			return Error
 		}
-		if result.State != Passed {
-			return result.State
+		if priority[result.State] > priority[outcome] {
+			outcome = result.State
 		}
 	}
 	if !required {
 		return Unsupported
 	}
-	return Passed
+	return outcome
 }
