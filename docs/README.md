@@ -5,6 +5,9 @@ Bellows runs existing GitHub Actions workflows locally through Docker and
 
 Use these docs when adding Bellows to a repository:
 
+- [how-it-works.md](how-it-works.md): execution model and workflow diagrams.
+- [releases.md](releases.md): automatic versions and release recovery.
+
 - [installation.md](installation.md): install Bellows and its local runtime
   dependencies.
 - [quickstart.md](quickstart.md): initialize a repo and run the first local

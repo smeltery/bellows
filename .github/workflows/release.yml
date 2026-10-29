@@ -2,88 +2,49 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing stable version tag to publish
+        required: true
+        type: string
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
-  test:
-    strategy:
-      fail-fast: false
-      matrix:
-        # macos-latest is omitted while GitHub-hosted macOS is blocked by org billing/spending limits.
-        os: [ubuntu-24.04]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Run tests
-        run: go test -race -coverprofile=coverage.out ./...
-
-      - name: Check coverage
-        run: |
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
-          echo "Total coverage: ${COVERAGE}%"
-          python3 - "$COVERAGE" <<'PY'
-          import sys
-          coverage = float(sys.argv[1])
-          if coverage < 60:
-              print(f"Coverage {coverage}% is below 60% threshold")
-              sys.exit(1)
-          PY
-
-  lint:
+  publish:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - uses: golangci/golangci-lint-action@v9
-        with:
-          version: v2.11.2
-
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        # macos-latest is omitted while GitHub-hosted macOS is blocked by org billing/spending limits.
-        os: [ubuntu-24.04]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Build
-        run: go build -o bellows .
-
-  goreleaser:
-    needs: [test, lint, build]
-    runs-on: ubuntu-24.04
-    steps:
+      - name: Validate tag
+        run: '[[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]'
       - uses: actions/checkout@v5
         with:
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
           fetch-depth: 0
-
-      - uses: actions/setup-go@v6
+          persist-credentials: false
+      - uses: flox/install-flox-action@61d86f71ca9fc8061fea04e5bc5e3a8206423dca
+      - uses: flox/activate-action@6abc249840d01f0c59473f21ba74821564d320b7
         with:
-          go-version: stable
-
-      - uses: goreleaser/goreleaser-action@v7
+          command: make check
+      - uses: flox/activate-action@6abc249840d01f0c59473f21ba74821564d320b7
         with:
-          version: v2.18.0
-          args: release --clean
+          command: goreleaser release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      - name: Dispatch installation smoke tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run smoke.yml --ref main -f tag="$RELEASE_TAG"

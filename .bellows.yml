@@ -6,6 +6,7 @@ docker:
     pull: missing
 runner:
     map:
+        ubuntu-24.04: ghcr.io/smeltery/kiln:ubuntu-24.04
         ubuntu-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
 secrets:
     mode: none
@@ -13,3 +14,5 @@ precommit:
     stage: pre-push
     mode: full
     timeout_seconds: 900
+skip:
+    jobs: [publish, cut-release]

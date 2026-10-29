@@ -1,9 +1,17 @@
 repos:
   - repo: local
     hooks:
-      - id: bellows
-        name: Run GitHub Actions locally with Bellows
-        entry: bellows run --precommit
+      - id: validate
+        name: Validate docs, budgets, and CI configuration
+        entry: flox activate -- make validate
         language: system
         pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: check
+        name: Run shared CI checks
+        entry: flox activate -- make check
+        language: system
+        pass_filenames: false
+        always_run: true
         stages: [pre-push]

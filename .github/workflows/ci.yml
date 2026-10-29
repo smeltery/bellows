@@ -4,87 +4,37 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  check:
     strategy:
       fail-fast: false
       matrix:
-        # macos-latest is omitted while GitHub-hosted macOS is blocked by org billing/spending limits.
-        os: [ubuntu-24.04]
+        os: [ubuntu-24.04, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-
-      - uses: actions/setup-go@v6
         with:
-          go-version-file: go.mod
-
-      - name: Run tests
-        run: go test -race -coverprofile=coverage.out ./...
-
-      - name: Check coverage
-        run: |
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
-          echo "Total coverage: ${COVERAGE}%"
-          python3 - "$COVERAGE" <<'PY'
-          import sys
-          coverage = float(sys.argv[1])
-          if coverage < 60:
-              print(f"Coverage {coverage}% is below 60% threshold")
-              sys.exit(1)
-          PY
-
-      - name: Upload coverage
-        if: ${{ env.ACT != 'true' }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: flox/install-flox-action@61d86f71ca9fc8061fea04e5bc5e3a8206423dca
+      - uses: flox/activate-action@6abc249840d01f0c59473f21ba74821564d320b7
+        with:
+          command: make release-check
+      - uses: actions/upload-artifact@v6
         continue-on-error: true
-        uses: actions/upload-artifact@v6
+        if: ${{ env.ACT != 'true' }}
         with:
           name: coverage-${{ matrix.os }}
           path: coverage.out
-
-  lint:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - uses: golangci/golangci-lint-action@v9
-        with:
-          version: v2.11.2
-
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        # macos-latest is omitted while GitHub-hosted macOS is blocked by org billing/spending limits.
-        os: [ubuntu-24.04]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Build
-        run: go build -o bellows .
-
-  bellows:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Dogfood Bellows
-        run: |
-          go run . config validate
-          go run . policy
-          go run . compat
-          go run . run --list --estimate
+          if-no-files-found: error

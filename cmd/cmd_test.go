@@ -44,6 +44,9 @@ func TestTopLevelCommandsAreDocumented(t *testing.T) {
 	root := newRootCmd("test")
 	commandsDoc := readFile(t, filepath.Join("..", "docs", "commands.md"))
 	readme := readFile(t, filepath.Join("..", "README.md"))
+	if !strings.Contains(readme, "docs/commands.md") {
+		t.Fatal("README.md must link to the command reference")
+	}
 	for _, command := range root.Commands() {
 		name := command.Name()
 		if command.Hidden {
@@ -51,12 +54,6 @@ func TestTopLevelCommandsAreDocumented(t *testing.T) {
 		}
 		if !strings.Contains(commandsDoc, "bellows "+name) && !strings.Contains(commandsDoc, "`bellows "+name+"`") {
 			t.Fatalf("docs/commands.md missing bellows %s", name)
-		}
-		if name == "completion" {
-			continue
-		}
-		if !strings.Contains(readme, "bellows "+name) && !strings.Contains(readme, "`bellows "+name+"`") {
-			t.Fatalf("README.md missing bellows %s", name)
 		}
 	}
 }
