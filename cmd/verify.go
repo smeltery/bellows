@@ -67,7 +67,13 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 		}
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
-		reporter, err := report.create(repository)
+		var current func(context.Context) (v.Identity, error)
+		reporter, err := report.create(repository, func(ctx context.Context) (v.Identity, error) {
+			if current == nil {
+				return v.Identity{}, fmt.Errorf("current execution identity unavailable")
+			}
+			return current(ctx)
+		})
 		if err != nil {
 			return err
 		}
@@ -79,7 +85,9 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 			Worktree: worktree.Options{Root: root, Repository: repository, Base: base, Head: head, Mode: mode}, Artifacts: artifacts,
 			Stdout: cmd.ErrOrStderr(), Stderr: cmd.ErrOrStderr(), Start: start,
 			Build: func(ctx context.Context, prepared *worktree.Run) (verificationrun.Plan, error) {
-				return buildVerificationPlan(ctx, root, daemon, leases, prepared)
+				built, err := buildVerificationPlan(ctx, root, daemon, leases, prepared)
+				current = built.Current
+				return built, err
 			},
 		})
 		if reporter != nil {
@@ -206,5 +214,12 @@ func buildVerificationPlan(ctx context.Context, root, daemon, leases string, pre
 		}
 	}
 	out.Identity.Fingerprints.Toolchain, err = executor.Toolchain(ctx, images)
+	identity := out.Identity
+	out.Current = func(ctx context.Context) (v.Identity, error) {
+		fresh := identity
+		var err error
+		fresh.Fingerprints.Toolchain, err = executor.Toolchain(ctx, images)
+		return fresh, err
+	}
 	return out, err
 }

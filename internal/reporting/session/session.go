@@ -19,17 +19,18 @@ type API interface {
 type Reporter struct {
 	mu         sync.Mutex
 	api        API
+	current    policy.Resolver
 	policy     *policy.Session
 	run        *policy.Run
 	repository string
 	pull       int
 }
 
-func New(api API, repository string, pull int, optIn bool) (*Reporter, error) {
-	if api == nil || repository == "" || pull < 1 || !optIn {
+func New(api API, repository string, pull int, optIn bool, current policy.Resolver) (*Reporter, error) {
+	if current == nil || api == nil || repository == "" || pull < 1 || !optIn {
 		return nil, errors.New("advisory reporting requires explicit trusted workstation opt-in and a pull request")
 	}
-	return &Reporter{api: api, repository: repository, pull: pull, policy: policy.New(policy.Options{OptIn: optIn, Repository: repository})}, nil
+	return &Reporter{api: api, current: current, repository: repository, pull: pull, policy: policy.New(policy.Options{OptIn: optIn, Repository: repository})}, nil
 }
 func (r *Reporter) Start(ctx context.Context, initial v.Receipt) error {
 	r.mu.Lock()
@@ -67,11 +68,14 @@ func (r *Reporter) Finish(ctx context.Context, completed v.Receipt) error {
 func (r *Reporter) publish(ctx context.Context, evidence v.Receipt, desired v.State, status github.State) error {
 	guard := func(ctx context.Context, _ v.Identity) error {
 		decision := r.policy.Authorize(ctx, r.run, evidence, desired, func(ctx context.Context) (v.Identity, error) {
+			current, err := r.current(ctx)
+			if err != nil || current != evidence.Identity {
+				return v.Identity{}, fmt.Errorf("current local verification identity changed")
+			}
 			head, base, err := r.api.PullIdentity(ctx, r.repository, r.pull)
 			if err != nil {
 				return v.Identity{}, err
 			}
-			current := evidence.Identity
 			current.Head, current.Base = head, base
 			return current, nil
 		})

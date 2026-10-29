@@ -18,10 +18,11 @@ func evidence() v.Receipt {
 	return v.Receipt{Version: 1, RunID: "fixture", StartedAt: time.Now().UTC(), Input: v.Ready, Identity: v.Identity{Repository: "example/repo", Head: strings.Repeat("b", 40), Base: strings.Repeat("c", 40), Tree: strings.Repeat("d", 40), Mode: v.ModeMerge, Executor: v.ExecutorFlox, Platform: "linux/amd64", Fingerprints: v.Fingerprints{Workflow: hash, Config: hash, Policy: hash, Dependencies: hash, Toolchain: hash, Environment: hash}}, Checks: []v.Check{{ID: "test", Required: true, Needs: []string{}}}, Results: []v.Result{}}
 }
 func TestAdvisoryLifecycleAgainstHTTP(t *testing.T) {
-	for _, scenario := range []string{"passed", "failed", "cancelled", "error", "head moved", "base moved", "api error", "duplicate"} {
+	for _, scenario := range []string{"passed", "failed", "cancelled", "error", "head moved", "base moved", "toolchain moved", "api error", "duplicate"} {
 		t.Run(scenario, func(t *testing.T) {
 			initial := evidence()
 			head, base := initial.Identity.Head, initial.Identity.Base
+			current := initial.Identity
 			var statuses []string
 			lookupCount := 0
 			reject := false
@@ -49,7 +50,7 @@ func TestAdvisoryLifecycleAgainstHTTP(t *testing.T) {
 				w.WriteHeader(201)
 			}))
 			defer server.Close()
-			reporter, err := New(github.Client{Token: "private-token", APIURL: server.URL, HTTP: server.Client()}, "example/repo", 1, true)
+			reporter, err := New(github.Client{Token: "private-token", APIURL: server.URL, HTTP: server.Client()}, "example/repo", 1, true, func(context.Context) (v.Identity, error) { return current, nil })
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -79,12 +80,14 @@ func TestAdvisoryLifecycleAgainstHTTP(t *testing.T) {
 				head = strings.Repeat("e", 40)
 			case "base moved":
 				base = strings.Repeat("e", 40)
+			case "toolchain moved":
+				current.Fingerprints.Toolchain = strings.Repeat("e", 64)
 			case "api error":
 				reject = true
 			}
 			final.Results = []v.Result{result}
 			err = reporter.Finish(context.Background(), final)
-			denied := scenario == "head moved" || scenario == "base moved" || scenario == "api error"
+			denied := scenario == "head moved" || scenario == "base moved" || scenario == "toolchain moved" || scenario == "api error"
 			if (err != nil) != denied {
 				t.Fatalf("finish: %v", err)
 			}
@@ -95,7 +98,7 @@ func TestAdvisoryLifecycleAgainstHTTP(t *testing.T) {
 			} else if len(statuses) != 2 || statuses[1] != want {
 				t.Fatalf("statuses=%v", statuses)
 			}
-			if lookupCount < 2 {
+			if lookupCount < 2 && scenario != "toolchain moved" {
 				t.Fatal("terminal status did not reread PR")
 			}
 			if scenario == "duplicate" {
@@ -107,7 +110,7 @@ func TestAdvisoryLifecycleAgainstHTTP(t *testing.T) {
 	}
 }
 func TestReportingRequiresOptIn(t *testing.T) {
-	if _, err := New(nil, "example/repo", 1, false); err == nil {
+	if _, err := New(nil, "example/repo", 1, false, nil); err == nil {
 		t.Fatal("missing explicit reporting accepted")
 	}
 }

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/smeltery/bellows/internal/reporting/github"
+	"github.com/smeltery/bellows/internal/reporting/policy"
 	"github.com/smeltery/bellows/internal/reporting/session"
 	"github.com/spf13/cobra"
 	"os"
@@ -20,7 +21,7 @@ func addReportingFlags(cmd *cobra.Command) *reportingFlags {
 	cmd.Flags().IntVar(&opts.pull, "pull-request", 0, "same-repository pull request number for live head/base validation")
 	return opts
 }
-func (o *reportingFlags) create(repository string) (*session.Reporter, error) {
+func (o *reportingFlags) create(repository string, current policy.Resolver) (*session.Reporter, error) {
 	if !o.enabled {
 		if o.trusted || o.pull != 0 {
 			return nil, fmt.Errorf("reporting options require --report")
@@ -31,5 +32,5 @@ func (o *reportingFlags) create(repository string) (*session.Reporter, error) {
 	if token == "" {
 		return nil, fmt.Errorf("--report requires BELLOWS_REPORT_TOKEN with commit status write and pull request read permissions")
 	}
-	return session.New(github.Client{Token: token}, repository, o.pull, o.trusted)
+	return session.New(github.Client{Token: token}, repository, o.pull, o.trusted, current)
 }
