@@ -37,6 +37,7 @@ func TestEvaluateRequiredChecks(t *testing.T) {
 		{"no checks", Ready, nil, nil, Unsupported},
 		{"missing prerequisite", Ready, []Check{{ID: "test", Required: true, Needs: []string{"build"}}}, []Result{passed}, Error},
 		{"passed prerequisite", Ready, []Check{check, {ID: "integration", Required: true, Needs: []string{"test"}}}, []Result{passed, {ID: "integration", State: Passed, ExitCode: &zero}}, Passed},
+		{"failed transitive prerequisite", Ready, []Check{{ID: "test", Required: true, Needs: []string{"optional"}}, {ID: "optional", Needs: []string{"build"}}, {ID: "build"}}, []Result{passed, {ID: "optional", State: Passed, ExitCode: &zero}, {ID: "build", State: Failed, ExitCode: &nonzero}}, Error},
 		{"optional failure", Ready, []Check{check, {ID: "optional"}}, []Result{passed, {ID: "optional", State: Failed, ExitCode: &nonzero}}, Passed},
 	}
 	for _, input := range []InputState{"", Dirty, Conflict, Stale, Invalid, "unknown"} {

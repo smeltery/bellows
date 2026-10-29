@@ -130,21 +130,23 @@ func Evaluate(input InputState, checks []Check, results []Result) State {
 	}
 	required := false
 	for _, check := range checks {
+		result, exists := observed[check.ID]
+		if result.State == Passed {
+			for _, dependency := range check.Needs {
+				if observed[dependency].State != Passed {
+					return Error
+				}
+			}
+		}
 		if !check.Required {
 			continue
 		}
 		required = true
-		result, exists := observed[check.ID]
 		if !exists {
 			return Error
 		}
 		if result.State != Passed {
 			return result.State
-		}
-		for _, dependency := range check.Needs {
-			if observed[dependency].State != Passed {
-				return Error
-			}
 		}
 	}
 	if !required {
