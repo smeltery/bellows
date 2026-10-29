@@ -193,3 +193,16 @@ func TestUnsupportedMatrixFact(t *testing.T) {
 		})
 	}
 }
+
+func TestServiceContextDetection(t *testing.T) {
+	for _, expression := range []string{"job.services.postgres.ports[5432]", "JOB . SERVICES.postgres", "job ['services'].postgres"} {
+		path := filepath.Join(t.TempDir(), "ci.yml")
+		if err := os.WriteFile(path, []byte("name: |\n  ${{ "+expression+" }}\njobs: {}\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		wf, err := Load(path)
+		if err != nil || !wf.UnsupportedServiceContext {
+			t.Fatalf("%s: %+v %v", expression, wf, err)
+		}
+	}
+}

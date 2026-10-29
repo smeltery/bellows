@@ -4,17 +4,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
+var serviceContextPattern = regexp.MustCompile(`(?i)\bjob\s*(?:\.\s*services|\[\s*["']services["']\s*\])`)
+
 type Workflow struct {
-	Events []string
-	Path   string
-	Name   string
-	Jobs   map[string]Job
+	UnsupportedServiceContext bool
+	Events                    []string
+	Path                      string
+	Name                      string
+	Jobs                      map[string]Job
 }
 
 type Job struct {
@@ -115,10 +119,11 @@ func Load(path string) (Workflow, error) {
 	}
 	sort.Strings(events)
 	wf := Workflow{
-		Events: events,
-		Path:   path,
-		Name:   raw.Name,
-		Jobs:   map[string]Job{},
+		UnsupportedServiceContext: serviceContextPattern.Match(data),
+		Events:                    events,
+		Path:                      path,
+		Name:                      raw.Name,
+		Jobs:                      map[string]Job{},
 	}
 	for id, rawJob := range raw.Jobs {
 		steps := make([]Step, 0, len(rawJob.Steps))

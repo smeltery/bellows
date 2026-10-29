@@ -30,7 +30,7 @@ jobs:
       - uses: flox/install-flox-action@61d86f71ca9fc8061fea04e5bc5e3a8206423dca
       - uses: flox/activate-action@6abc249840d01f0c59473f21ba74821564d320b7
         with:
-          command: make release-check
+          command: BELLOWS_NATIVE_FLOX_INTEGRATION=1 make release-check
       - uses: actions/upload-artifact@v7
         continue-on-error: true
         if: ${{ env.ACT != 'true' }}

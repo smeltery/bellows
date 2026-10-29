@@ -134,7 +134,7 @@ func TestDedicatedRunLifecycle(t *testing.T) {
 }
 func TestRefuseUnsafeInputsAndRetainDirtyLease(t *testing.T) {
 	e, req, root := fake(t)
-	for _, name := range []string{"GH_TOKEN", "GITHUB_TOKEN", "PATH", "HOME", "DOCKER_HOST", "ACT_OPTIONS", "BASH_ENV"} {
+	for _, name := range []string{"GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN", "PATH", "HOME", "DOCKER_HOST", "ACT_OPTIONS", "BASH_ENV"} {
 		bad := req
 		bad.Env = []string{name + "=secret"}
 		if result, err := e.Run(context.Background(), bad); err == nil || result.State == v.Passed {
@@ -189,5 +189,42 @@ func TestNeverRemoveForeignVolume(t *testing.T) {
 	}
 	if err = e.Close(); err == nil {
 		t.Fatal("dirty daemon lease released")
+	}
+}
+
+func TestToolchainFreshnessAfterClose(t *testing.T) {
+	e, req, root := fake(t)
+	if err := e.Close(); err != nil {
+		t.Fatal(err)
+	}
+	digest, err := e.Toolchain(context.Background(), nil)
+	if err != nil || digest != req.Identity.Fingerprints.Toolchain {
+		t.Fatal("closed freshness read changed", err)
+	}
+	if err = os.WriteFile(filepath.Join(root, "image"), []byte("sha256:new"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := e.Toolchain(context.Background(), nil)
+	if err != nil || changed == digest {
+		t.Fatal("closed freshness read missed changed image", err)
+	}
+	if result, err := e.Run(context.Background(), req); err == nil || result.State == v.Passed {
+		t.Fatal("closed executor ran")
+	}
+}
+func TestUnsupportedServiceContext(t *testing.T) {
+	e, req, root := fake(t)
+	file, err := os.OpenFile(filepath.Join(root, "ci.yml"), os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = file.WriteString("# ${{ job.services.postgres.ports[5432] }}\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err = file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if result, err := e.Run(context.Background(), req); !errors.Is(err, ErrUnsupported) || result.State != v.Unsupported {
+		t.Fatalf("%+v %v", result, err)
 	}
 }
