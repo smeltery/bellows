@@ -32,6 +32,7 @@ import (
 
 func newVerifyCmd(opts *cliOptions) *cobra.Command {
 	var repository, base, head, mode, daemon, format, artifacts, leases, profile string
+	var downloadCache, coldCache bool
 	cmd := &cobra.Command{Use: "verify", Short: "Verify committed changes locally and save an advisory receipt", Args: cobra.NoArgs}
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		if !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_][A-Za-z0-9_.-]*$`).MatchString(repository) || base == "" || (profile == "" && !verificationDaemon(daemon)) || (profile != "" && cmd.Flags().Changed("daemon")) {
@@ -39,6 +40,9 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 		}
 		if (format != "text" && format != "json") || (mode != v.ModeMerge && mode != v.ModeHead) {
 			return fmt.Errorf("verify requires --format text|json and --mode merge|head")
+		}
+		if profile == "" && (downloadCache || coldCache) {
+			return fmt.Errorf("download-cache flags require --profile; cold Docker runs require a new daemon")
 		}
 		root, err := repoRoot(opts.repoRoot)
 		if err != nil {
@@ -70,10 +74,17 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 			Worktree: worktree.Options{Root: root, Repository: repository, Base: base, Head: head, Mode: mode}, Artifacts: artifacts,
 			Stdout: cmd.ErrOrStderr(), Stderr: cmd.ErrOrStderr(),
 			Build: func(ctx context.Context, prepared *worktree.Run) (verificationrun.Plan, error) {
+				var built verificationrun.Plan
+				var err error
 				if profile != "" {
-					return buildNativeVerificationPlan(ctx, profile, prepared)
+					built, err = buildNativeVerificationPlan(ctx, profile, prepared)
+				} else {
+					built, err = buildVerificationPlan(ctx, root, daemon, leases, prepared)
 				}
-				return buildVerificationPlan(ctx, root, daemon, leases, prepared)
+				if err != nil {
+					return built, err
+				}
+				return applyVerificationCache(prepared.Path, filepath.Join(cache, "bellows", "downloads"), downloadCache, coldCache, built)
 			},
 		})
 		if format == "json" {
@@ -90,6 +101,8 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 	cmd.Flags().StringVar(&base, "base", "", "target branch or commit")
 	cmd.Flags().StringVar(&head, "head", "HEAD", "source branch or commit")
 	cmd.Flags().StringVar(&mode, "mode", v.ModeMerge, "input mode: merge or head")
+	cmd.Flags().BoolVar(&downloadCache, "download-cache", false, "reuse repository-scoped npm downloads for native profiles")
+	cmd.Flags().BoolVar(&coldCache, "cold-cache", false, "use a disposable empty npm download store for native profiles")
 	cmd.Flags().StringVar(&profile, "profile", "", "explicit native Flox verification profile (without --daemon)")
 	cmd.Flags().StringVar(&daemon, "daemon", "", "operator-owned dedicated Linux Docker socket URL")
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text or json")

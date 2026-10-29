@@ -55,7 +55,13 @@ func Open(root string, id v.Identity, cold bool) (lease *Lease, err error) {
 		}
 		return nil, err
 	}
-	defer unlock(root, &err)
+	defer func() {
+		unlock(root, &err)
+		if err != nil && lease != nil {
+			err = errors.Join(err, lease.Close())
+			lease = nil
+		}
+	}()
 	key := fmt.Sprintf("%x", sha256.Sum256([]byte(strings.Join([]string{id.Repository, id.Platform, f.Toolchain, f.Dependencies}, "\x00"))))
 	path := filepath.Join(root, key)
 	state := "reuse"

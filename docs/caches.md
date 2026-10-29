@@ -6,6 +6,24 @@ Its optional native cache adapter points npm at a private download store using
 `npm_config_cache`; npm logs are disabled for that store. npm validates cached
 content and refetches corrupt data when online. See the [npm cache documentation](https://docs.npmjs.com/cli/cache/).
 
+## Use the cache
+
+Opt in for a committed native profile:
+
+```sh
+bellows verify --repository example/project --base origin/main \
+  --profile native --download-cache
+bellows verify --repository example/project --base origin/main \
+  --profile native --cold-cache
+```
+
+Both flags require `--profile`. `--cold-cache` creates a disposable empty store
+without requiring `--download-cache`. Reusable stores live under the private user
+cache directory at `bellows/downloads`. Cold and warm operation have the same
+semantic environment fingerprint; temporary filesystem paths are not included.
+Docker verification automatically binds its dedicated daemon to the repository,
+and rejects these npm-cache flags rather than claiming a cold Docker run.
+
 ## Scope and concurrency
 
 The key includes repository, execution platform, toolchain fingerprint and
@@ -44,7 +62,8 @@ the native execution environment, and compose `Close()` with executor cleanup.
 store was available, not that npm found every requested package in it. Operational
 cache paths do not replace semantic input fingerprints.
 
-Call `Prune(root, 32, 7*24*time.Hour)` to keep at most 32 inactive owned entries and
+The CLI calls `Prune(root, 32, 7*24*time.Hour)` before opening a reusable native cache to
+keep at most 32 inactive owned entries and
 expire inactive entries older than seven days. Active leases are excluded.
 Pruning never deletes unrelated paths or follows a cached directory symlink.
 A crashed process can leave a lease; an operator must confirm the process ended
