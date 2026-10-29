@@ -5,6 +5,15 @@ Bellows runs existing GitHub Actions workflows locally through Docker and
 
 Use these docs when adding Bellows to a repository:
 
+- [local-verification.md](local-verification.md): verify committed head/base inputs,
+  inspect receipts and recover from failures.
+- [native-profiles.md](native-profiles.md): run existing commands through Flox.
+- [trusted-reporting.md](trusted-reporting.md): intentionally publish advisory
+  statuses with fresh input checks.
+- [services.md](services.md): use isolated dedicated Docker daemons.
+- [caches.md](caches.md): reuse scoped downloads and build layers with explicit
+  cold-cache controls.
+
 - [how-it-works.md](how-it-works.md): execution model and workflow diagrams.
 - [releases.md](releases.md): automatic versions and release recovery.
 

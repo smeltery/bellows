@@ -1,0 +1,12 @@
+version: 1
+profiles:
+  local:
+    executor: flox
+    checks:
+      go:
+        argv: [go, test, ./...]
+      web-install:
+        argv: [npm, --prefix, web, ci]
+      web-test:
+        argv: [npm, --prefix, web, test]
+        needs: [web-install]

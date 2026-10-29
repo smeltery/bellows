@@ -11,7 +11,8 @@ Bellows runs your existing GitHub Actions workflows locally using
 [act](https://github.com/nektos/act) and Docker. Preview execution plans, diagnose
 compatibility issues, and catch failures before pushing. Blacksmith runner
 mappings, explicit secret allowlists, and pre-push hooks fit existing workflows.
-Cloud CI remains the authority for platform-specific behavior and releases.
+Use exact-commit verification with native Flox commands or a dedicated Docker
+daemon, and retain hosted CI for platform coverage and merge enforcement.
 
 ## Get started
 
@@ -34,7 +35,8 @@ other act-compatible images.
 
 Start with the [documentation guide](docs/README.md), or jump to
 [installation](docs/installation.md), [quickstart](docs/quickstart.md),
-[configuration](docs/configuration.md), [commands](docs/commands.md), and
+[configuration](docs/configuration.md),
+[local verification](docs/local-verification.md), [commands](docs/commands.md), and
 [troubleshooting](docs/troubleshooting.md).
 [How it works](docs/how-it-works.md) explains the execution model with diagrams.
 
