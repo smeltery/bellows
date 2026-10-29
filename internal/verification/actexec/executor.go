@@ -4,6 +4,7 @@ package actexec
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -249,16 +250,28 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 		}
 		args = append(args, "--matrix", key+":"+value)
 	}
+	environment := map[string]string{}
 	for _, entry := range request.Env {
-		name, _, _ := strings.Cut(entry, "=")
-		flag := "--env"
+		name, value, _ := strings.Cut(entry, "=")
 		if slices.Contains(e.cfg.Secrets.Allow, name) {
-			flag = "--secret"
+			args = append(args, "--secret", name)
+		} else {
+			environment[name] = value
 		}
-		args = append(args, flag, name)
 	}
+	data, err := json.Marshal(environment)
+	if err != nil {
+		return result, err
+	}
+	envPath := filepath.Join(e.cache, "environment.yml")
+	if err = os.WriteFile(envPath, data, 0600); err != nil {
+		return result, err
+	}
+	defer os.Remove(envPath)
+	args = append(args, "--env-file", envPath)
+
 	args = append(args, "--rm", "--pull=false", "--no-cache-server", "--action-cache-path", e.cache, "--container-daemon-socket", "/var/run/docker.sock")
-	for _, flag := range []string{"--env-file", "--secret-file", "--input-file", "--var-file"} {
+	for _, flag := range []string{"--secret-file", "--input-file", "--var-file"} {
 		args = append(args, flag, os.DevNull)
 	}
 	cmd := exec.CommandContext(ctx, "act", args...)

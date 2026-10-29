@@ -45,6 +45,7 @@ if test "$1" = --version; then echo 'act version 0.2.88'; exit; fi
 printf '%s\n' "$@" > '`+root+`/args'
 while test "$#" -gt 0; do
  if test "$1" = --job; then job="$2"; fi
+ if test "$1" = --env-file; then cat "$2" > '`+root+`/environment'; fi
  shift
 done
 case "$job" in
@@ -92,6 +93,8 @@ func TestDedicatedRunLifecycle(t *testing.T) {
 		t.Fatal("daemon alias bypassed lease")
 	}
 	req.Matrix = map[string]string{"version": "a:b", "os": "linux"}
+	req.Env = []string{"NORMAL=hello world", "SECRET_INPUT=hidden-value"}
+	e.cfg.Secrets.Allow = []string{"SECRET_INPUT"}
 	result, err := e.Run(context.Background(), req)
 	if err != nil || result.State != v.Passed {
 		t.Fatalf("%+v %v", result, err)
@@ -102,6 +105,13 @@ func TestDedicatedRunLifecycle(t *testing.T) {
 	}
 	if !strings.Contains(string(args), "--matrix\nos:linux\n--matrix\nversion:a:b") || !strings.Contains(string(args), "sha256:original") || !strings.Contains(string(args), "--pull=false") {
 		t.Fatal(string(args))
+	}
+	environment, err := os.ReadFile(filepath.Join(root, "environment"))
+	if err != nil || string(environment) != `{"NORMAL":"hello world"}` || strings.Contains(string(args), "hidden-value") {
+		t.Fatal("environment or secret forwarding incorrect", string(environment), err)
+	}
+	if _, err := os.Stat(filepath.Join(e.cache, "environment.yml")); !os.IsNotExist(err) {
+		t.Fatal("environment file retained")
 	}
 	req.Job = "fail"
 	result, err = e.Run(context.Background(), req)
