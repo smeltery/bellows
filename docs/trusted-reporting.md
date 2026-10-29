@@ -89,12 +89,15 @@ bellows verify --repository example/project --base origin/main --head HEAD \
   --report --trust-workstation --pull-request 123
 ```
 
-The token needs commit-status write and pull-request read permissions for the
+The token needs commit-status write, pull-request read and Contents read permissions for the
 selected repository. It stays in the publisher process and is excluded from
 verification subprocess environments. Never pass it as a command argument or
 commit it to repository configuration.
 
-Bellows reads the live pull request head and base before each status attempt.
+Bellows resolves both current branch refs before each status attempt rather than
+trusting potentially stale pull-request snapshot SHAs. Missing, inaccessible or
+inconsistent refs reject publication; the [Git reference endpoint](https://docs.github.com/en/rest/git/refs#get-a-reference)
+requires Contents read permission for private repositories.
 Only an open pull request within the selected repository is supported. It posts
 `bellows/verify` pending before execution and a terminal advisory status after
 cleanup and receipt persistence. A changed head/base, invalid lifecycle,
