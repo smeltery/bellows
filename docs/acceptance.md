@@ -71,6 +71,29 @@ main CI, release and smoke runs are green. Exact license-content equality is a
 separate private audit check; acceptance still requires its recorded confirmation.
 No source-budget increase is introduced by this report.
 
+## Supporting fixes and private evidence checkpoint
+
+[PR 9](https://github.com/smeltery/bellows/pull/9) (`5e91f6c`, NIC-72)
+isolates Git fixture environments in contributor hooks. This prevents temporary
+repository tests from inheriting a caller's real index, refs or signing setup.
+
+[Private PR 77](https://github.com/smeltery/nightshift/pull/77) (`65de7a9`,
+NIC-73) remains in review. Its engine shutdown fix preserves `CI=true`, uses a
+version-matched dependency patch and prevents cancellation from spawning a
+replacement process after cleanup. The exact source tree passed the private
+14-step verifier and the affected real PostgreSQL integration tests. Hosted
+checks were prevented from starting by billing restrictions; they are not
+represented as green. Merge approval and the final consuming-profile evidence
+remain separate requirements.
+
+The private onboarding agent reported a complete cold run with all eight
+required profile checks passing on the supported rootful Linux runner. The
+previous callback-networking failure was resolved on that runner. A later
+revision adds owned-volume cleanup; its exact warm replay is still in progress.
+Independent failure-injection, concurrent-run and cancellation evidence remains
+pending in NIC-65. These checkpoint summaries do not replace the final private
+receipt matrix, which retains each run's distinct source identity.
+
 ## Public evidence and invariants
 
 [Main CI run 40912041059](https://github.com/smeltery/bellows/actions/runs/40912041059)
@@ -129,9 +152,11 @@ required context or change repository privacy, billing or branch settings.
 
 1. Merge the private onboarding and any narrowly required parity fixes, then
    record the exact versions used by the complete required-check matrix.
-2. Resolve service callback/networking differences on the supported runner.
-   A passing engine restart fixture alone does not prove the full private
-   execution suite or either image build.
+2. Confirm the final private revision after the supported rootful Linux runner
+   resolved the observed service callback/networking difference. One complete
+   cold run passed all eight required checks on an earlier revision; the exact
+   final warm replay remains pending. Do not combine different source identities
+   into one final-version pass.
 3. Preserve private evidence for cold/warm complete runs, independent concurrent
    attempts, representative lint/shard/database/image failures, cancellation
    and cleanup. Explain any supported-platform limitation explicitly.
