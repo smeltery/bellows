@@ -39,24 +39,14 @@ Bellows hooks in another project, use the [user hook guide](pre-commit.md).
 ## Keep changes small
 
 `scripts/budget.ts` enforces nonblank line budgets for production Go and custom
-check scripts (4,300 and 80 lines respectively). Tests are excluded so coverage is not discouraged. Prefer shared
+check scripts (4,700 and 80 lines respectively). Tests are excluded so coverage is not discouraged. Prefer shared
 Make targets and existing tools over new wrappers. Any budget increase should
 include a rationale in the pull request.
 
-The 4,300-line production budget reserves a bounded foundation envelope above
-the 3,376-line baseline: roughly 150 contract, 90 Git-discovery, 200 worktree,
-300 receipt-validation and 150 selection lines. It remains a hard check; native
-adapters and reporting require separately reviewed, measured adjustments.
-
-Markdown uses markdownlint; all fenced Mermaid diagrams must parse with Mermaid.
-Bun dependencies are pinned in `package.json` and `bun.lock`. After a toolchain
-change, update the Flox lockfile with `flox install` or `flox upgrade`, commit it,
-and run the checks again. Do not hand-edit the lockfile.
-
-## Git isolation in hooks
-
-Contributor hooks clear Git-local environment variables before running checks,
-so tests that create temporary repositories cannot target the caller's worktree.
-`make test` also ignores global and system Git configuration for its child
-processes, avoiding user signing prompts and global hooks in fixtures. These
-settings do not modify your Git configuration or affect normal commits.
+The 4,700-line production budget provides a measured foundation allowance above
+our 3,376-line baseline: roughly 150 contract, 90 Git-discovery, 200 worktree,
+370 receipt-validation, 270 selection, and 160 native Flox adapter lines. Strict
+receipt validation and complete prerequisite selection exceeded their initial
+estimates. The allowance covers their combined integration, including the Flox
+adapter; reporting requires a separately reviewed, measured adjustment. This
+remains a hard check, not a per-branch exemption.
