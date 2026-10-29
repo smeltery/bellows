@@ -17,7 +17,10 @@ const MaxBytes = 1 << 20
 
 func Decode(data []byte) (v.Receipt, error) {
 	var r v.Receipt
-	if len(data) > MaxBytes || !utf8.Valid(data) {
+	if !utf8.Valid(data) {
+		return r, fmt.Errorf("receipt contains invalid UTF-8")
+	}
+	if len(data) > MaxBytes {
 		return r, fmt.Errorf("receipt exceeds %d bytes", MaxBytes)
 	}
 	d := json.NewDecoder(bytes.NewReader(data))

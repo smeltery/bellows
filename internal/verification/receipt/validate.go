@@ -20,17 +20,21 @@ var (
 
 func Validate(r v.Receipt) error {
 	id, f := r.Identity, r.Identity.Fingerprints
-	if r.Version != v.ReceiptVersion || r.RunID == "" || !repository.MatchString(id.Repository) || id.Platform == "" ||
-		(id.Mode != v.ModeHead && id.Mode != v.ModeMerge) || (id.Executor != v.ExecutorAct && id.Executor != v.ExecutorFlox) {
+	required := func(value string) bool { return r.Input == v.Ready || value != "" }
+	if r.Version != v.ReceiptVersion || r.RunID == "" ||
+		(required(id.Repository) && !repository.MatchString(id.Repository)) ||
+		(r.Input == v.Ready && id.Platform == "") ||
+		(required(id.Mode) && id.Mode != v.ModeHead && id.Mode != v.ModeMerge) ||
+		(required(id.Executor) && id.Executor != v.ExecutorAct && id.Executor != v.ExecutorFlox) {
 		return fmt.Errorf("invalid receipt version or identity")
 	}
 	for _, value := range []string{id.Head, id.Base, id.Tree} {
-		if !objectID.MatchString(value) && (r.Input == v.Ready || value != "") {
+		if !objectID.MatchString(value) && required(value) {
 			return fmt.Errorf("invalid Git object identity")
 		}
 	}
 	for _, value := range []string{f.Workflow, f.Config, f.Policy, f.Dependencies, f.Toolchain, f.Environment} {
-		if !digest.MatchString(value) && (r.Input == v.Ready || value != "") {
+		if !digest.MatchString(value) && required(value) {
 			return fmt.Errorf("invalid input fingerprint")
 		}
 	}

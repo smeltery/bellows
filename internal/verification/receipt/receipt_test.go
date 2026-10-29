@@ -375,3 +375,32 @@ func TestReadersOnlySeeCompleteReceipts(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestUnresolvedIdentityRoundTrip(t *testing.T) {
+	for _, input := range []v.InputState{v.Dirty, v.Conflict, v.Stale, v.Invalid} {
+		r := fixture(t)
+		r.Input = input
+		r.Identity = v.Identity{}
+		r.Checks = []v.Check{}
+		r.Results = []v.Result{}
+		data, err := Encode(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoded, err := Decode(data)
+		if err != nil || decoded.Identity != r.Identity {
+			t.Fatalf("unresolved roundtrip: %v", err)
+		}
+		for _, mutate := range []func(*v.Identity){func(i *v.Identity) { i.Repository = "https://example.invalid/repo" }, func(i *v.Identity) { i.Mode = "bad" }, func(i *v.Identity) { i.Executor = "bad" }} {
+			bad := r
+			mutate(&bad.Identity)
+			if Validate(bad) == nil {
+				t.Fatal("accepted malformed resolved field")
+			}
+		}
+		r.Input = v.Ready
+		if Validate(r) == nil {
+			t.Fatal("ready accepted unresolved identity")
+		}
+	}
+}
