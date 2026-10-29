@@ -187,9 +187,12 @@ func (s *Session) Authorize(ctx context.Context, run *Run, presented v.Receipt, 
 // Callers must also build the process base environment from an explicit allowlist.
 func CheckExecutorEnv(env []string) error {
 	for _, entry := range env {
-		name, _, _ := strings.Cut(entry, "=")
+		name, _, found := strings.Cut(entry, "=")
+		if !found || name == "" || strings.ContainsRune(entry, 0) {
+			return errors.New("malformed executor environment entry")
+		}
 		switch strings.ToUpper(name) {
-		case "GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN":
+		case "BELLOWS_REPORT_TOKEN", "GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN":
 			return errors.New("publisher credentials are forbidden in executor environment")
 		}
 	}

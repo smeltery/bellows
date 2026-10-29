@@ -42,7 +42,7 @@ never expose either as an import-and-publish route.
 Keep the publication credential in the reporting process. Build child process
 environments from an explicit allowlist and call `policy.CheckExecutorEnv` on
 all executor overrides, including explicitly requested secrets. It rejects
-`GH_TOKEN`, `GITHUB_TOKEN`, `GH_ENTERPRISE_TOKEN`, and
+`BELLOWS_REPORT_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`, `GH_ENTERPRISE_TOKEN`, and
 `GITHUB_ENTERPRISE_TOKEN`; an explicit override does not permit forwarding a
 publisher credential. The helper does not sanitize inherited process state or
 arbitrary differently named secrets, so passing `os.Environ()` remains invalid.

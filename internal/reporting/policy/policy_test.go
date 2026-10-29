@@ -183,7 +183,7 @@ func TestTerminalFailuresAreReportable(t *testing.T) {
 	}
 }
 func TestExecutorCredentialOverrideRejected(t *testing.T) {
-	for _, name := range []string{"GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN"} {
+	for _, name := range []string{"BELLOWS_REPORT_TOKEN", "GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN"} {
 		executed := false
 		env := []string{"PATH=/usr/bin", name + "=synthetic-secret"}
 		if CheckExecutorEnv(env) == nil {
@@ -194,6 +194,17 @@ func TestExecutorCredentialOverrideRejected(t *testing.T) {
 		}
 	}
 	if err := CheckExecutorEnv([]string{"PATH=/usr/bin", "CI=true", "GITHUB_WORKSPACE=/tmp/example"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestMalformedExecutorEnvironment(t *testing.T) {
+	for _, entry := range []string{"TOKEN", "=value", "TOKEN=bad\x00value", "TO\x00KEN=value"} {
+		if CheckExecutorEnv([]string{entry}) == nil {
+			t.Fatal("accepted malformed environment")
+		}
+	}
+	if err := CheckExecutorEnv([]string{"EMPTY="}); err != nil {
 		t.Fatal(err)
 	}
 }
