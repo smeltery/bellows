@@ -30,9 +30,18 @@ func TestAdvisoryLifecycleAgainstHTTP(t *testing.T) {
 				if r.Header.Get("Authorization") != "Bearer private-token" {
 					t.Error("missing publisher credential")
 				}
+				if strings.Contains(r.URL.Path, "/git/ref/heads/") {
+					branch := strings.TrimPrefix(r.URL.Path, "/repos/example/repo/git/ref/heads/")
+					sha := head
+					if branch == "main" {
+						sha = base
+					}
+					_ = json.NewEncoder(w).Encode(map[string]any{"ref": "refs/heads/" + branch, "object": map[string]string{"type": "commit", "sha": sha}})
+					return
+				}
 				if r.Method == http.MethodGet {
 					lookupCount++
-					_ = json.NewEncoder(w).Encode(map[string]any{"state": "open", "head": map[string]any{"sha": head, "repo": map[string]string{"full_name": "example/repo"}}, "base": map[string]any{"sha": base, "repo": map[string]string{"full_name": "example/repo"}}})
+					_ = json.NewEncoder(w).Encode(map[string]any{"state": "open", "head": map[string]any{"ref": "feature", "sha": initial.Identity.Head, "repo": map[string]string{"full_name": "example/repo"}}, "base": map[string]any{"ref": "main", "sha": initial.Identity.Base, "repo": map[string]string{"full_name": "example/repo"}}})
 					return
 				}
 				var body map[string]string
