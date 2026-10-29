@@ -19,6 +19,7 @@ import (
 )
 
 type Plan struct {
+	Current  func(context.Context) (v.Identity, error)
 	Identity v.Identity
 	Targets  []changed.Target
 	Executor v.Executor
