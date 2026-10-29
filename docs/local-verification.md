@@ -87,6 +87,18 @@ No publication occurs by default. Repository code runs with the local user's
 trust; neither native execution nor a Docker socket provides a security boundary
 against hostile code running as that user.
 
+For a read-only view of enforcement API availability:
+
+```sh
+bellows verify capabilities --repository example/project --branch main --format json
+```
+
+Private repositories need an appropriately authorized `BELLOWS_REPORT_TOKEN`.
+A 403 can reflect access or plan restrictions; a readable API is not proof that
+strict checks apply to every merge path. See
+[advisory freshness](design/advisory-freshness.md) for bounded monitoring and
+post-run stale-result handling.
+
 [Pre-push hooks](pre-commit.md) provide early feedback and can be bypassed.
 GitHub permissions and required checks determine hosted merge enforcement.
 An advisory helper cannot prevent direct UI or API merges.
