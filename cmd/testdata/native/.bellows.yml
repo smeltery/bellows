@@ -1,0 +1,26 @@
+version: 1
+profiles:
+  native:
+    executor: flox
+    checks:
+      test:
+        argv: [/bin/sh, check.sh, pass, '$(touch escaped)']
+        needs: [verify]
+      verify:
+        argv: [/bin/sh, check.sh, pass]
+  equivalent:
+    executor: flox
+    checks:
+      test:
+        argv: [/bin/sh, check.sh, pass, '$(touch escaped)']
+        needs: [verify]
+      verify:
+        argv: [/bin/sh, check.sh, pass]
+  failure:
+    executor: flox
+    checks:
+      test:
+        argv: [/bin/sh, check.sh, pass]
+        needs: [verify]
+      verify:
+        argv: [/bin/sh, check.sh, fail]

@@ -281,3 +281,9 @@ Machine-readable outputs also have schemas:
 
 - [`docs/schemas/doctor.schema.json`](schemas/doctor.schema.json)
 - [`docs/schemas/explain.schema.json`](schemas/explain.schema.json)
+
+## Native verification profiles
+
+Use opt-in [native Flox profiles](native-profiles.md) to map required checks to
+explicit argv commands and prerequisites. Select one with `bellows verify
+--profile NAME`; existing workflow configuration retains its behavior.
