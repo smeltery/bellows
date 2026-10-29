@@ -185,3 +185,24 @@ func TestReadySchemaRequiresResolvedIdentity(t *testing.T) {
 		}
 	}
 }
+
+func TestEvaluateOrderIndependent(t *testing.T) {
+	checks := []Check{{ID: "a", Required: true}, {ID: "b", Required: true}}
+	states := []State{Pending, Skipped, Unsupported, Cancelled, Failed, Error}
+	for i, first := range states {
+		for j, second := range states {
+			results := []Result{{ID: "a", State: first}, {ID: "b", State: second}}
+			want := first
+			if j > i {
+				want = second
+			}
+			if got := Evaluate(Ready, checks, results); got != want {
+				t.Fatalf("%s/%s: %s want %s", first, second, got, want)
+			}
+			reversed := []Check{checks[1], checks[0]}
+			if got := Evaluate(Ready, reversed, results); got != want {
+				t.Fatalf("reordering changed result: %s", got)
+			}
+		}
+	}
+}

@@ -27,7 +27,7 @@ func TestDedicatedDockerIntegration(t *testing.T) {
 			defer cancel()
 			run := func(args ...string) string {
 				t.Helper()
-				output, err := exec.CommandContext(ctx, "docker", args...).CombinedOutput()
+				output, err := exec.CommandContext(ctx, "docker", args...).Output()
 				if err != nil {
 					t.Fatalf("docker %v: %v\n%s", args, err, output)
 				}
@@ -78,7 +78,8 @@ func TestDedicatedDockerIntegration(t *testing.T) {
 				t.Fatal(err)
 			}
 			for _, args := range [][]string{{"init", "-b", "main"}, {"add", "."}, {"-c", "commit.gpgsign=false", "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture"}} {
-				cmd := exec.Command("git", args...)
+				cmd := exec.Command("git", append([]string{"-c", "core.hooksPath=" + filepath.Join(root, ".no-hooks")}, args...)...)
+				cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + root, "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_NOSYSTEM=1"}
 				cmd.Dir = root
 				if output, err := cmd.CombinedOutput(); err != nil {
 					t.Fatalf("git: %v %s", err, output)

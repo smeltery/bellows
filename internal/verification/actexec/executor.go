@@ -101,6 +101,12 @@ func (e *Executor) empty(ctx context.Context) error {
 
 // Toolchain fingerprints pre-pulled immutable image IDs; it never pulls mutable tags.
 func (e *Executor) Toolchain(ctx context.Context, images []string) (string, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.closed {
+		return "", fmt.Errorf("executor is closed")
+	}
+	e.fingerprint = ""
 	cmd := exec.CommandContext(ctx, "act", "--version")
 	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + e.cache}
 	version, err := cmd.Output()
@@ -126,9 +132,6 @@ func (e *Executor) Toolchain(ctx context.Context, images []string) (string, erro
 		e.images[name] = id
 		material += "\n" + name + "=" + id
 	}
-	for label, image := range e.cfg.Runner.Map {
-		e.cfg.Runner.Map[label] = e.images[image]
-	}
 	e.fingerprint = fmt.Sprintf("%x", sha256.Sum256([]byte(material)))
 	return e.fingerprint, nil
 }
@@ -139,7 +142,7 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 	result = v.Result{ID: request.Check.ID, State: v.Error}
 	start := time.Now()
 	defer func() { result.DurationMS = time.Since(start).Milliseconds() }()
-	if e.closed || request.RunID == "" || request.Check.ID == "" || request.Workflow == "" || request.Job == "" || request.Identity.Executor != v.ExecutorAct || request.Identity.Fingerprints.Toolchain != e.fingerprint {
+	if e.closed || request.RunID == "" || request.Check.ID == "" || request.Workflow == "" || request.Job == "" || e.fingerprint == "" || request.Identity.Executor != v.ExecutorAct || request.Identity.Fingerprints.Toolchain != e.fingerprint {
 		return result, fmt.Errorf("invalid act execution request")
 	}
 	for _, entry := range request.Env {
@@ -173,7 +176,7 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 		return result, fmt.Errorf("%w: workflow event does not match", ErrUnsupported)
 	}
 	job, exists := wf.Jobs[request.Job]
-	if !exists || job.UnsupportedMatrix || job.If != "" || job.Uses != "" || len(job.Steps) == 0 {
+	if !exists || job.UnsupportedMatrix || job.If != "" || job.Uses != "" || len(job.Steps) == 0 || len(job.RunsOn) == 0 {
 		result.State = v.Unsupported
 		return result, fmt.Errorf("%w: absent, conditional, reusable or empty job", ErrUnsupported)
 	}
@@ -225,7 +228,12 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 			}
 		}
 	}
-	args, err := act.Args(act.Options{Workflow: request.Workflow, Job: request.Job, Config: e.cfg})
+	pinned := *e.cfg
+	pinned.Runner.Map = map[string]string{}
+	for label, image := range e.cfg.Runner.Map {
+		pinned.Runner.Map[label] = e.images[image]
+	}
+	args, err := act.Args(act.Options{Workflow: request.Workflow, Job: request.Job, Config: &pinned})
 	if err != nil {
 		return result, err
 	}
@@ -260,9 +268,19 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 	cmd.Stdout, cmd.Stderr = request.Stdout, request.Stderr
 	cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
 	cmd.WaitDelay = 10 * time.Second
+	if _, err = e.docker(ctx, "volume", "create", "--label", "bellows.owner="+filepath.Base(e.lease), "act-toolcache"); err != nil {
+		return result, err
+	}
 	runErr := cmd.Run()
 	cleanupCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+	owner, inspectErr := e.docker(cleanupCtx, "volume", "inspect", "act-toolcache", "--format", `{{index .Labels "bellows.owner"}}`)
+	if inspectErr != nil || owner != filepath.Base(e.lease) {
+		return result, fmt.Errorf("act toolcache ownership changed")
+	}
+	if _, err = e.docker(cleanupCtx, "volume", "rm", "act-toolcache"); err != nil {
+		return result, err
+	}
 	if err = e.empty(cleanupCtx); err != nil {
 		return result, err
 	}
