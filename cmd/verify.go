@@ -33,6 +33,7 @@ import (
 
 func newVerifyCmd(opts *cliOptions) *cobra.Command {
 	var repository, base, head, mode, daemon, format, artifacts, leases, profile string
+	var downloadCache, coldCache bool
 	cmd := &cobra.Command{Use: "verify", Short: "Verify committed changes locally and save an advisory receipt", Args: cobra.NoArgs}
 	report := addReportingFlags(cmd)
 	cmd.AddCommand(newCapabilityCmd())
@@ -42,6 +43,9 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 		}
 		if (format != "text" && format != "json") || (mode != v.ModeMerge && mode != v.ModeHead) {
 			return fmt.Errorf("verify requires --format text|json and --mode merge|head")
+		}
+		if profile == "" && (downloadCache || coldCache) {
+			return fmt.Errorf("download-cache flags require --profile; cold Docker runs require a new daemon")
 		}
 		if report.enabled && mode != v.ModeMerge {
 			return fmt.Errorf("advisory reporting requires merge verification mode")
@@ -97,6 +101,9 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 				} else {
 					built, err = buildVerificationPlan(ctx, root, daemon, leases, prepared)
 				}
+				if err == nil {
+					built, err = applyVerificationCache(prepared.Path, filepath.Join(cache, "bellows", "downloads"), downloadCache, coldCache, built)
+				}
 				current = currentWithRefs(root, base, head, built.Current)
 				return built, err
 			},
@@ -132,6 +139,8 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 	cmd.Flags().StringVar(&base, "base", "", "target branch or commit")
 	cmd.Flags().StringVar(&head, "head", "HEAD", "source branch or commit")
 	cmd.Flags().StringVar(&mode, "mode", v.ModeMerge, "input mode: merge or head")
+	cmd.Flags().BoolVar(&downloadCache, "download-cache", false, "reuse repository-scoped npm downloads for native profiles")
+	cmd.Flags().BoolVar(&coldCache, "cold-cache", false, "use a disposable empty npm download store for native profiles")
 	cmd.Flags().StringVar(&profile, "profile", "", "explicit native Flox verification profile (without --daemon)")
 	cmd.Flags().StringVar(&daemon, "daemon", "", "operator-owned dedicated Linux Docker socket URL")
 	cmd.Flags().StringVar(&format, "format", "text", "output format: text or json")

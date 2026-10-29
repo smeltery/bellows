@@ -36,7 +36,7 @@ func TestDedicatedDockerIntegration(t *testing.T) {
 			name := "bellows-service-" + strings.ToLower(rand.Text())
 			id := run("run", "--detach", "--privileged", "--name", name, "--label", "bellows.fixture="+name, "--env", "DOCKER_TLS_CERTDIR=", "--publish", "127.0.0.1::2375", "docker:28-dind")
 			t.Cleanup(func() {
-				output, err := exec.Command("docker", "rm", "--force", id).CombinedOutput()
+				output, err := exec.Command("docker", "rm", "--force", "--volumes", id).CombinedOutput()
 				if err != nil {
 					t.Errorf("owned daemon cleanup: %v %s", err, output)
 				}
