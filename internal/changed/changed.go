@@ -1,7 +1,6 @@
 package changed
 
 import (
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,28 +12,6 @@ type Selection struct {
 	Files     []string
 	Workflows []string
 	Jobs      []string
-}
-
-func GitFiles(repoRoot string) ([]string, error) {
-	out, err := exec.Command("git", "-C", repoRoot, "diff", "--name-only", "--cached", "HEAD").Output()
-	if err == nil {
-		files := splitLines(string(out))
-		if len(files) > 0 {
-			return files, nil
-		}
-	}
-	out, err = exec.Command("git", "-C", repoRoot, "diff", "--name-only", "HEAD").Output()
-	if err == nil {
-		files := splitLines(string(out))
-		if len(files) > 0 {
-			return files, nil
-		}
-	}
-	out, err = exec.Command("git", "-C", repoRoot, "ls-files", "--others", "--exclude-standard").Output()
-	if err != nil {
-		return nil, err
-	}
-	return splitLines(string(out)), nil
 }
 
 func Select(files []string, rules []config.PathRule, defaults []string) Selection {
@@ -96,21 +73,4 @@ func matchSegments(pattern, file []string) bool {
 		return false
 	}
 	return matchSegments(pattern[1:], file[1:])
-}
-
-func splitLines(out string) []string {
-	var files []string
-	start := 0
-	for i, r := range out {
-		if r == '\n' {
-			if i > start {
-				files = append(files, out[start:i])
-			}
-			start = i + 1
-		}
-	}
-	if start < len(out) {
-		files = append(files, out[start:])
-	}
-	return files
 }
