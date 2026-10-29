@@ -53,4 +53,3 @@ Recommended defaults:
 Bellows reduces wasted cloud runner minutes by catching failures earlier. It
 does not replace protected branch checks, GitHub Actions status checks, or
 Blacksmith-hosted CI.
-

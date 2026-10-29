@@ -9,8 +9,12 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
 jobs:
   go-install:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag || 'latest' }}
@@ -29,6 +33,7 @@ jobs:
           bellows --help
 
   go-install-private-mode:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     env:
       GOPRIVATE: github.com/dotbrains/*
@@ -47,6 +52,7 @@ jobs:
         run: bellows --version
 
   homebrew-install:
+    timeout-minutes: 15
     runs-on: macos-latest
     env:
       HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
@@ -69,6 +75,7 @@ jobs:
 
   release-archive:
     if: github.event_name == 'release' || inputs.tag != ''
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
@@ -77,10 +84,11 @@ jobs:
       - name: Download release artifacts
         run: |
           mkdir -p dist
-          gh release download "$TAG" --repo dotbrains/bellows --pattern "bellows_linux_amd64.tar.gz" --dir dist
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "bellows_linux_amd64.tar.gz" --pattern "checksums.txt" --dir dist
 
       - name: Check archive binary
         run: |
+          (cd dist && sha256sum --check --ignore-missing checksums.txt)
           tar -xzf dist/bellows_linux_amd64.tar.gz -C dist
           dist/bellows --version
           dist/bellows --help

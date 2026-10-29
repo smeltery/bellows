@@ -1,0 +1,13 @@
+{
+  "name": "bellows-checks",
+  "private": true,
+  "scripts": {
+    "docs": "markdownlint-cli2 && bun scripts/check.ts",
+    "budget": "bun scripts/budget.ts"
+  },
+  "devDependencies": {
+    "jsdom": "27.0.1",
+    "markdownlint-cli2": "0.18.1",
+    "mermaid": "11.12.0"
+  }
+}

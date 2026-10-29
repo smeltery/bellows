@@ -1,0 +1,55 @@
+name: Auto Release
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+
+concurrency:
+  group: auto-release-main
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  cut-release:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Tag the tested commit and dispatch publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags
+          if [ "$(git rev-parse origin/main)" != "$TESTED_SHA" ]; then
+            echo "Skipping superseded CI run"
+            exit 0
+          fi
+          stable_tags() { grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true; }
+          tag="$(git tag --points-at "$TESTED_SHA" | stable_tags | sort -V | tail -1)"
+          if [ -z "$tag" ]; then
+            latest="$(git tag --list | stable_tags | sort -V | tail -1)"
+            if [ -z "$latest" ]; then
+              tag=v0.1.0
+            else
+              tag="${latest%.*}.$((${latest##*.} + 1))"
+            fi
+            git tag "$tag" "$TESTED_SHA"
+            git push origin "$tag"
+          fi
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh workflow run release.yml --ref main -f tag="$tag"
+          fi
