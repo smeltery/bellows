@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/dotbrains/bellows/main/docs/schemas/explain.schema.json",
+  "$id": "https://raw.githubusercontent.com/smeltery/bellows/main/docs/schemas/explain.schema.json",
   "title": "Bellows execution plan",
   "type": "object",
   "additionalProperties": false,

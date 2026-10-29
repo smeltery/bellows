@@ -79,12 +79,12 @@ func DefaultConfig() *Config {
 		},
 		Runner: RunnerConfig{
 			Map: map[string]string{
-				"ubuntu-latest": "ghcr.io/dotbrains/kiln:ubuntu-22.04",
-				"ubuntu-22.04":  "ghcr.io/dotbrains/kiln:ubuntu-22.04",
-				"ubuntu-24.04":  "ghcr.io/dotbrains/kiln:ubuntu-24.04",
-				"macos-latest":  "ghcr.io/dotbrains/kiln:ubuntu-22.04",
-				"macos-14":      "ghcr.io/dotbrains/kiln:ubuntu-22.04",
-				"macos-15":      "ghcr.io/dotbrains/kiln:ubuntu-22.04",
+				"ubuntu-latest": "ghcr.io/smeltery/kiln:ubuntu-22.04",
+				"ubuntu-22.04":  "ghcr.io/smeltery/kiln:ubuntu-22.04",
+				"ubuntu-24.04":  "ghcr.io/smeltery/kiln:ubuntu-24.04",
+				"macos-latest":  "ghcr.io/smeltery/kiln:ubuntu-22.04",
+				"macos-14":      "ghcr.io/smeltery/kiln:ubuntu-22.04",
+				"macos-15":      "ghcr.io/smeltery/kiln:ubuntu-22.04",
 			},
 		},
 		Secrets: SecretsConfig{
@@ -514,7 +514,7 @@ func Minimal(workflows []string, runnerLabels []string, skippedJobs ...string) *
 		}
 	}
 	if len(cfg.Runner.Map) == 0 {
-		cfg.Runner.Map["ubuntu-latest"] = "ghcr.io/dotbrains/kiln:ubuntu-22.04"
+		cfg.Runner.Map["ubuntu-latest"] = "ghcr.io/smeltery/kiln:ubuntu-22.04"
 	}
 	cfg.Skip.Jobs = append([]string(nil), skippedJobs...)
 	return cfg
@@ -525,11 +525,11 @@ func DefaultRunnerImage(label string) (string, bool) {
 	case "ubuntu-latest", "ubuntu-22.04", "macos-latest", "macos-14", "macos-15",
 		"blacksmith-2vcpu-ubuntu-2204", "blacksmith-4vcpu-ubuntu-2204", "blacksmith-8vcpu-ubuntu-2204",
 		"blacksmith-16vcpu-ubuntu-2204", "blacksmith-32vcpu-ubuntu-2204":
-		return "ghcr.io/dotbrains/kiln:ubuntu-22.04", true
+		return "ghcr.io/smeltery/kiln:ubuntu-22.04", true
 	case "ubuntu-24.04",
 		"blacksmith-2vcpu-ubuntu-2404", "blacksmith-4vcpu-ubuntu-2404", "blacksmith-8vcpu-ubuntu-2404",
 		"blacksmith-16vcpu-ubuntu-2404", "blacksmith-32vcpu-ubuntu-2404":
-		return "ghcr.io/dotbrains/kiln:ubuntu-24.04", true
+		return "ghcr.io/smeltery/kiln:ubuntu-24.04", true
 	default:
 		return "", false
 	}

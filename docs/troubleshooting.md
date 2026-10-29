@@ -47,7 +47,7 @@ Add a local mapping:
 ```yaml
 runner:
   map:
-    custom-ubuntu-runner: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    custom-ubuntu-runner: ghcr.io/smeltery/kiln:ubuntu-22.04
 ```
 
 ## Dynamic Runner Expressions
@@ -66,8 +66,8 @@ Make sure `.bellows.yml` includes mappings for the possible matrix values:
 ```yaml
 runner:
   map:
-    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    macos-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    ubuntu-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
+    macos-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
 ```
 
 The macOS mapping is a local compatibility fallback. It does not emulate macOS.

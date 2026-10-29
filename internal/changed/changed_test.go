@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dotbrains/bellows/internal/config"
+	"github.com/smeltery/bellows/internal/config"
 )
 
 func TestSelectMatchesPathRules(t *testing.T) {

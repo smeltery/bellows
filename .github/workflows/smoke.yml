@@ -15,7 +15,7 @@ permissions:
 jobs:
   go-install:
     timeout-minutes: 15
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag || 'latest' }}
     steps:
@@ -25,7 +25,7 @@ jobs:
           cache: false
 
       - name: Install Bellows with Go
-        run: GOPROXY=direct go install github.com/dotbrains/bellows@"$TAG"
+        run: GOPROXY=direct go install github.com/smeltery/bellows@"$TAG"
 
       - name: Check installed binary
         run: |
@@ -34,10 +34,10 @@ jobs:
 
   go-install-private-mode:
     timeout-minutes: 15
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
-      GOPRIVATE: github.com/dotbrains/*
-      GONOSUMDB: github.com/dotbrains/*
+      GOPRIVATE: github.com/smeltery/*
+      GONOSUMDB: github.com/smeltery/*
       TAG: ${{ github.event.release.tag_name || inputs.tag || 'latest' }}
     steps:
       - uses: actions/setup-go@v6
@@ -46,7 +46,7 @@ jobs:
           cache: false
 
       - name: Install Bellows with private module settings
-        run: GOPROXY=direct go install github.com/dotbrains/bellows@"$TAG"
+        run: GOPROXY=direct go install github.com/smeltery/bellows@"$TAG"
 
       - name: Check installed binary
         run: bellows --version
@@ -60,9 +60,9 @@ jobs:
     steps:
       - name: Install Bellows from Homebrew
         run: |
-          brew tap dotbrains/tap
-          brew install --cask dotbrains/tap/bellows
-          brew audit --cask dotbrains/tap/bellows --online
+          brew tap smeltery/tap
+          brew install --cask smeltery/tap/bellows
+          brew audit --cask smeltery/tap/bellows --online
 
       - name: Check installed binary
         run: |
@@ -76,7 +76,7 @@ jobs:
   release-archive:
     if: github.event_name == 'release' || inputs.tag != ''
     timeout-minutes: 15
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
       TAG: ${{ github.event.release.tag_name || inputs.tag }}

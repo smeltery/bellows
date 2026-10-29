@@ -3,7 +3,7 @@ package runner
 import (
 	"testing"
 
-	"github.com/dotbrains/bellows/internal/config"
+	"github.com/smeltery/bellows/internal/config"
 )
 
 func TestResolveUsesConfigDefaultAndBuiltins(t *testing.T) {
@@ -16,7 +16,7 @@ func TestResolveUsesConfigDefaultAndBuiltins(t *testing.T) {
 	if got, ok := Resolve("custom", cfg); !ok || got != "local/custom:latest" {
 		t.Fatalf("custom Resolve = %q, %v", got, ok)
 	}
-	if got, ok := Resolve("blacksmith-4vcpu-ubuntu-2204", cfg); !ok || got != "ghcr.io/dotbrains/kiln:ubuntu-22.04" {
+	if got, ok := Resolve("blacksmith-4vcpu-ubuntu-2204", cfg); !ok || got != "ghcr.io/smeltery/kiln:ubuntu-22.04" {
 		t.Fatalf("blacksmith Resolve = %q, %v", got, ok)
 	}
 	if got, ok := Resolve("unknown", cfg); !ok || got != "local/default:latest" {

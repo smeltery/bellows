@@ -12,22 +12,22 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dotbrains/bellows/internal/act"
-	"github.com/dotbrains/bellows/internal/changed"
-	"github.com/dotbrains/bellows/internal/compat"
-	"github.com/dotbrains/bellows/internal/config"
-	"github.com/dotbrains/bellows/internal/diagnostic"
-	"github.com/dotbrains/bellows/internal/doctor"
-	"github.com/dotbrains/bellows/internal/migrate"
-	"github.com/dotbrains/bellows/internal/plan"
-	"github.com/dotbrains/bellows/internal/policy"
-	"github.com/dotbrains/bellows/internal/precommit"
-	"github.com/dotbrains/bellows/internal/releasecheck"
-	"github.com/dotbrains/bellows/internal/runner"
-	"github.com/dotbrains/bellows/internal/schemas"
-	"github.com/dotbrains/bellows/internal/secrets"
-	"github.com/dotbrains/bellows/internal/selftest"
-	"github.com/dotbrains/bellows/internal/workflow"
+	"github.com/smeltery/bellows/internal/act"
+	"github.com/smeltery/bellows/internal/changed"
+	"github.com/smeltery/bellows/internal/compat"
+	"github.com/smeltery/bellows/internal/config"
+	"github.com/smeltery/bellows/internal/diagnostic"
+	"github.com/smeltery/bellows/internal/doctor"
+	"github.com/smeltery/bellows/internal/migrate"
+	"github.com/smeltery/bellows/internal/plan"
+	"github.com/smeltery/bellows/internal/policy"
+	"github.com/smeltery/bellows/internal/precommit"
+	"github.com/smeltery/bellows/internal/releasecheck"
+	"github.com/smeltery/bellows/internal/runner"
+	"github.com/smeltery/bellows/internal/schemas"
+	"github.com/smeltery/bellows/internal/secrets"
+	"github.com/smeltery/bellows/internal/selftest"
+	"github.com/smeltery/bellows/internal/workflow"
 	"github.com/spf13/cobra"
 )
 
@@ -1158,7 +1158,7 @@ func sarifLog(findings []doctor.Finding) sarif {
 		Runs: []sarifRun{{
 			Tool: sarifTool{Driver: sarifDriver{
 				Name:           "bellows",
-				InformationURI: "https://github.com/dotbrains/bellows",
+				InformationURI: "https://github.com/smeltery/bellows",
 				Rules:          rules,
 			}},
 			Results: results,

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/dotbrains/bellows/cmd"
+	"github.com/smeltery/bellows/cmd"
 )
 
 var version = "dev"

@@ -1,6 +1,6 @@
 package runner
 
-import "github.com/dotbrains/bellows/internal/config"
+import "github.com/smeltery/bellows/internal/config"
 
 func Resolve(label string, cfg config.RunnerConfig) (string, bool) {
 	if image, ok := cfg.Map[label]; ok && image != "" {

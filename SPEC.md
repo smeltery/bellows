@@ -91,10 +91,10 @@ default_workflows:
 event: pull_request
 runner:
   map:
-    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    macos-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    ubuntu-22.04: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    ubuntu-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
+    macos-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
+    ubuntu-22.04: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
 precommit:
   stage: pre-push
   mode: full
@@ -134,12 +134,12 @@ Bellows does not require workflow rewrites for common Blacksmith labels.
 ```yaml
 runner:
   map:
-    blacksmith-2vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-8vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-2vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
-    blacksmith-4vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
-    blacksmith-8vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    blacksmith-2vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-8vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-2vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04
+    blacksmith-4vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04
+    blacksmith-8vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04
 ```
 
 Cloud-only Blacksmith behavior, larger CPU and memory guarantees, GPUs, OIDC, deployment environments, and proprietary acceleration are not locally emulated.
@@ -148,4 +148,4 @@ macOS itself is not emulated.
 
 ## License
 
-Bellows uses the PolyForm Shield License 1.0.0. The root `LICENSE` file must exactly match `dotbrains/lodestone:LICENSE`.
+Bellows uses the PolyForm Shield License 1.0.0. The root `LICENSE` file must exactly match `smeltery/lodestone:LICENSE`.

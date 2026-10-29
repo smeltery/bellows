@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"sort"
 
-	"github.com/dotbrains/bellows/internal/config"
-	"github.com/dotbrains/bellows/internal/workflow"
+	"github.com/smeltery/bellows/internal/config"
+	"github.com/smeltery/bellows/internal/workflow"
 )
 
 var secretRef = regexp.MustCompile(`secrets\.([A-Za-z_][A-Za-z0-9_]*)`)

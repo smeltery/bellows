@@ -18,7 +18,7 @@ Cloud CI remains the authority for platform-specific behavior and releases.
 Install Docker and act, then:
 
 ```sh
-go install github.com/dotbrains/bellows@latest
+go install github.com/smeltery/bellows@latest
 cd your-repo
 bellows init
 bellows doctor
@@ -26,8 +26,8 @@ bellows run --list --estimate
 bellows run
 ```
 
-The Go module retains its existing import path. Default runners use the
-[kiln](https://github.com/dotbrains/kiln) image; configure `.bellows.yml` to choose
+Default runners use the
+[kiln](https://github.com/smeltery/kiln) image; configure `.bellows.yml` to choose
 other act-compatible images.
 
 ## Documentation

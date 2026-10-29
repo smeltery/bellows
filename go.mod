@@ -1,4 +1,4 @@
-module github.com/dotbrains/bellows
+module github.com/smeltery/bellows
 
 go 1.24.0
 

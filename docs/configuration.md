@@ -20,17 +20,17 @@ docker:
   pull: missing
 
 runner:
-  default_image: ghcr.io/dotbrains/kiln:ubuntu-22.04
+  default_image: ghcr.io/smeltery/kiln:ubuntu-22.04
   map:
-    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    ubuntu-22.04: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    macos-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-2vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-4vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-8vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-16vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-32vcpu-ubuntu-2204: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-4vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    ubuntu-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
+    ubuntu-22.04: ghcr.io/smeltery/kiln:ubuntu-22.04
+    macos-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-2vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-8vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-16vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-32vcpu-ubuntu-2204: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04
 
 secrets:
   mode: env
@@ -142,16 +142,16 @@ not a universal default; some actions work better with the host architecture.
 ### `runner`
 
 Maps GitHub Actions runner labels to local Docker images. Defaults point at
-[kiln](https://github.com/dotbrains/kiln), a hardened, glibc-native Wolfi `act`
-runner published at the public `ghcr.io/dotbrains/kiln` package. Override these
+[kiln](https://github.com/smeltery/kiln), a hardened, glibc-native Wolfi `act`
+runner published at the public `ghcr.io/smeltery/kiln` package. Override these
 values to use any other act-compatible image.
 
 ```yaml
 runner:
-  default_image: ghcr.io/dotbrains/kiln:ubuntu-22.04
+  default_image: ghcr.io/smeltery/kiln:ubuntu-22.04
   map:
-    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    macos-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    ubuntu-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
+    macos-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
 ```
 
 If a workflow uses an unmapped `runs-on` label, Bellows:
@@ -240,12 +240,12 @@ default_workflows:
 event: pull_request
 runner:
   map:
-    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
+    ubuntu-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
 ```
 
 Add Blacksmith mappings only when Blacksmith runner labels are detected.
 Known Blacksmith Ubuntu 22.04 and 24.04 labels from 2 to 32 vCPU are mapped to
-the matching `ghcr.io/dotbrains/kiln` act image.
+the matching `ghcr.io/smeltery/kiln` act image.
 
 macOS runner labels may be mapped to Ubuntu-based act images for local
 compatibility. This catches some cross-platform failures locally but does not

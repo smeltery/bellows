@@ -32,6 +32,7 @@ jobs:
         with:
           command: make release-check
       - uses: actions/upload-artifact@v6
+        continue-on-error: true
         if: ${{ env.ACT != 'true' }}
         with:
           name: coverage-${{ matrix.os }}

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dotbrains/bellows/internal/config"
+	"github.com/smeltery/bellows/internal/config"
 )
 
 type Selection struct {

@@ -6,8 +6,8 @@ docker:
     pull: missing
 runner:
     map:
-        ubuntu-24.04: ghcr.io/dotbrains/kiln:ubuntu-24.04
-        ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
+        ubuntu-24.04: ghcr.io/smeltery/kiln:ubuntu-24.04
+        ubuntu-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
 secrets:
     mode: none
 precommit:

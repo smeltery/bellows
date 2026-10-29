@@ -4,8 +4,8 @@ default_workflows:
 event: pull_request
 runner:
   map:
-    ubuntu-latest: ghcr.io/dotbrains/kiln:ubuntu-22.04
-    blacksmith-4vcpu-ubuntu-2404: ghcr.io/dotbrains/kiln:ubuntu-24.04
+    ubuntu-latest: ghcr.io/smeltery/kiln:ubuntu-22.04
+    blacksmith-4vcpu-ubuntu-2404: ghcr.io/smeltery/kiln:ubuntu-24.04
 skip:
   jobs:
     - publish
