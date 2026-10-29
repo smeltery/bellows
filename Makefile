@@ -25,7 +25,7 @@ validate:
 check: validate lint test build dogfood
 
 test:
-	go test -race -coverprofile=coverage.out ./...
+	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 go test -race -coverprofile=coverage.out ./...
 	@go tool cover -func=coverage.out | awk '/^total:/ { print; if ($$3 + 0 < 60) exit 1 }'
 
 vet:
