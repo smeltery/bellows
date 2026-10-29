@@ -187,3 +187,30 @@ func TestDiscoverIgnoresInheritedRepositoryEnvironment(t *testing.T) {
 		t.Fatal("foreign repository was modified")
 	}
 }
+
+func TestDiscoverIncludesIgnoredSubmoduleChanges(t *testing.T) {
+	dependency := repository(t)
+	commit(t, dependency)
+	root := repository(t)
+	commit(t, root)
+	git(t, root, "-c", "protocol.file.allow=always", "submodule", "add", dependency, "dependency")
+	git(t, root, "config", "-f", ".gitmodules", "submodule.dependency.ignore", "all")
+	base := commit(t, root)
+	git(t, root, "config", "diff.ignoreSubmodules", "all")
+	commit(t, filepath.Join(root, "dependency"))
+	for _, scope := range []Scope{WorkingTree, Staged, BaseHead} {
+		opts := Options{Scope: scope}
+		if scope == Staged {
+			git(t, root, "add", "dependency")
+		}
+		if scope == BaseHead {
+			commit(t, root)
+			opts.Base = base
+		}
+		got, err := Discover(root, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertFiles(t, got.Files, []string{"dependency"})
+	}
+}

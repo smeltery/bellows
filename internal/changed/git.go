@@ -46,9 +46,9 @@ func Discover(repoRoot string, opts Options) (Changes, error) {
 		if opts.Base != "" || opts.Head != "" {
 			return changes, fmt.Errorf("%s scope does not accept base or head refs", opts.Scope)
 		}
-		commands = append(commands, []string{"diff", "--cached", "--name-only", "--no-renames", "-z", "--"})
+		commands = append(commands, []string{"diff", "--cached", "--name-only", "--no-renames", "--ignore-submodules=none", "-z", "--"})
 		if opts.Scope == WorkingTree {
-			commands = append(commands, []string{"diff", "--name-only", "--no-renames", "-z", "--"}, []string{"ls-files", "--others", "--exclude-standard", "-z"})
+			commands = append(commands, []string{"diff", "--name-only", "--no-renames", "--ignore-submodules=none", "-z", "--"}, []string{"ls-files", "--others", "--exclude-standard", "-z"})
 		}
 	case Outgoing, BaseHead:
 		if opts.Head == "" {
@@ -86,7 +86,7 @@ func Discover(repoRoot string, opts Options) (Changes, error) {
 			return Changes{}, fmt.Errorf("expected one merge base, found %d", len(bases))
 		}
 		changes.MergeBase = bases[0]
-		commands = append(commands, []string{"diff", "--name-only", "--no-renames", "-z", changes.MergeBase, changes.Head, "--"})
+		commands = append(commands, []string{"diff", "--name-only", "--no-renames", "--ignore-submodules=none", "-z", changes.MergeBase, changes.Head, "--"})
 	default:
 		return changes, fmt.Errorf("unknown change scope %q", opts.Scope)
 	}
