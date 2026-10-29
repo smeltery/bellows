@@ -104,9 +104,6 @@ func (e *Executor) empty(ctx context.Context) error {
 func (e *Executor) Toolchain(ctx context.Context, images []string) (string, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if e.closed {
-		return "", fmt.Errorf("executor is closed")
-	}
 	e.fingerprint = ""
 	cmd := exec.CommandContext(ctx, "act", "--version")
 	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + e.cache}
@@ -148,7 +145,7 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 	}
 	for _, entry := range request.Env {
 		name, _, ok := strings.Cut(entry, "=")
-		if !ok || name == "" || name == "PATH" || name == "HOME" || name == "GH_TOKEN" || name == "GITHUB_TOKEN" || name == "ENV" || name == "BASH_ENV" || name == "NODE_OPTIONS" || strings.HasPrefix(name, "DOCKER") || strings.HasPrefix(name, "ACT") || strings.HasPrefix(name, "GIT") || strings.HasPrefix(name, "XDG") || strings.HasPrefix(name, "LD_") || strings.HasPrefix(name, "DYLD_") {
+		if !ok || name == "" || name == "PATH" || name == "HOME" || name == "GH_TOKEN" || name == "GITHUB_TOKEN" || name == "GH_ENTERPRISE_TOKEN" || name == "GITHUB_ENTERPRISE_TOKEN" || name == "ENV" || name == "BASH_ENV" || name == "NODE_OPTIONS" || strings.HasPrefix(name, "DOCKER") || strings.HasPrefix(name, "ACT") || strings.HasPrefix(name, "GIT") || strings.HasPrefix(name, "XDG") || strings.HasPrefix(name, "LD_") || strings.HasPrefix(name, "DYLD_") {
 			return result, fmt.Errorf("reserved execution environment variable")
 		}
 	}
@@ -171,6 +168,10 @@ func (e *Executor) Run(ctx context.Context, request v.Request) (result v.Result,
 	wf, loadErr := workflow.Load(path)
 	if loadErr != nil {
 		return result, loadErr
+	}
+	if wf.UnsupportedServiceContext {
+		result.State = v.Unsupported
+		return result, fmt.Errorf("%w: job.services context is not implemented by act", ErrUnsupported)
 	}
 	if !slices.Contains(wf.Events, e.cfg.Event) {
 		result.State = v.Unsupported
