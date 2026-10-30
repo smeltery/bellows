@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -40,6 +41,11 @@ case "$1 $2" in
  'container ls') if test -f '`+root+`/dirty'; then echo owned-container; fi;;
 esac
 `)
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	quote := func(value string) string { return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'" }
 	write(filepath.Join(bin, "act"), `#!/bin/sh
 if test "$1" = --version; then echo 'act version 0.2.88'; exit; fi
 printf '%s\n' "$@" > '`+root+`/args'
@@ -50,7 +56,7 @@ while test "$#" -gt 0; do
 done
 case "$job" in
  fail) exit 7;;
- cancel) trap 'exit 130' INT; touch '`+root+`/cancel-ready'; while :; do sleep 0.05; done;;
+ cancel) trap '' INT; exec `+quote(executable)+` '-test.run=^TestActCancellationProcess$' -- `+quote(filepath.Join(root, "cancel-ready"))+`;;
  foreign) echo foreign > '`+root+`/owner';;
  dirty) touch '`+root+`/dirty';;
 esac
@@ -259,4 +265,22 @@ func TestCancellationBeforeActStarts(t *testing.T) {
 	if result.State != v.Cancelled || !errors.Is(err, context.Canceled) {
 		t.Fatalf("%+v %v", result, err)
 	}
+}
+
+// A Go handler mirrors act: unlike a POSIX shell trap it re-enables inherited
+// ignored SIGINT (as observed when tests run from Git hooks).
+func TestActCancellationProcess(t *testing.T) {
+	if len(os.Args) < 3 || os.Args[len(os.Args)-2] != "--" {
+		return
+	}
+	if !signal.Ignored(os.Interrupt) {
+		t.Fatal("cancellation fixture must inherit ignored SIGINT")
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	if err := os.WriteFile(os.Args[len(os.Args)-1], nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	<-ctx.Done()
+	os.Exit(130)
 }
