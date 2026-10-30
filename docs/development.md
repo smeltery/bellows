@@ -43,12 +43,12 @@ check scripts (7,500 and 80 lines respectively). Tests are excluded so coverage 
 Make targets and existing tools over new wrappers. Any budget increase should
 include a rationale in the pull request.
 
-The post-acceptance result-reuse change adds 642 measured production lines to the
+The post-acceptance result-reuse change adds 645 measured production lines to the
 6,836-line MVP: 419 for authenticated bounded storage and filesystem safety,
-171 for run snapshots, freshness checks and sealed admission, and 52 for strict
-receipt compatibility, configuration and CLI wiring. The combined 7,478 lines
+171 for run snapshots, freshness checks and sealed admission, and 55 for strict
+receipt compatibility, configuration and CLI wiring. The combined 7,481 lines
 fit a 7,500-line ceiling, superseding the 7,000-line allowance. This allocation
-covers explicit provenance, validation and filesystem guards with 22 lines of
+covers explicit provenance, validation and filesystem guards with 19 lines of
 remaining headroom. No tooling allowance increased; later increases require
 another measured review.
 

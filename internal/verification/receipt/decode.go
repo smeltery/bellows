@@ -46,6 +46,9 @@ func Decode(data []byte) (v.Receipt, error) {
 	if !sameShape(actual, expected) {
 		return r, fmt.Errorf("receipt has unknown, missing or null fields")
 	}
+	if err := Validate(r); err != nil {
+		return r, err
+	}
 	object := actual.(map[string]any)
 	for _, key := range []string{"started_at", "completed_at"} {
 		if value, ok := object[key].(string); ok && !strings.HasSuffix(value, "Z") {
@@ -61,7 +64,7 @@ func Decode(data []byte) (v.Receipt, error) {
 			}
 		}
 	}
-	return r, Validate(r)
+	return r, nil
 }
 
 func readValue(d *json.Decoder, depth int) (any, error) {

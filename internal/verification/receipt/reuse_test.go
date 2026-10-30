@@ -2,11 +2,27 @@ package receipt
 
 import (
 	"bytes"
+	"encoding/json"
 	v "github.com/smeltery/bellows/internal/verification"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestDecodeRejectsNullResults(t *testing.T) {
+	for _, version := range []int{1, 2} {
+		r := fixture(t)
+		r.Version = version
+		r.Results = nil
+		data, err := json.Marshal(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Decode(data); err == nil {
+			t.Fatalf("version %d accepted null results", version)
+		}
+	}
+}
 
 func TestReuseProvenance(t *testing.T) {
 	old := fixture(t)
