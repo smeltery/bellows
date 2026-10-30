@@ -72,7 +72,7 @@ func TestReceiptFixtures(t *testing.T) {
 			if err := decoder.Decode(&receipt); err != nil {
 				t.Fatal(err)
 			}
-			if receipt.Version != ReceiptVersion || receipt.Identity.Head == receipt.Identity.Tree {
+			if receipt.Version != 1 || receipt.Identity.Head == receipt.Identity.Tree {
 				t.Fatal("fixture must identify a v1 proposed merge tree separately from its head")
 			}
 			if got := Evaluate(receipt.Input, receipt.Checks, receipt.Results); got != want {
@@ -106,14 +106,14 @@ func TestReceiptSchemaMatchesContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	definitions := schema["$defs"].(map[string]any)
-	for name, value := range map[string]any{"receipt": Receipt{}, "identity": Identity{}, "fingerprints": Fingerprints{}, "check": Check{}, "result": Result{}} {
+	for name, value := range map[string]any{"receipt": Receipt{}, "identity": Identity{}, "fingerprints": Fingerprints{}, "check": Check{}, "result": Result{}, "reuse": Reuse{}} {
 		t.Run(name, func(t *testing.T) {
 			definition := schema
 			if name != "receipt" {
 				definition = definitions[name].(map[string]any)
 			}
 			properties := definition["properties"].(map[string]any)
-			var keys, required, fields []string
+			var keys, required, fields, mandatory []string
 			for key := range properties {
 				keys = append(keys, key)
 			}
@@ -122,18 +122,24 @@ func TestReceiptSchemaMatchesContract(t *testing.T) {
 			}
 			typ := reflect.TypeOf(value)
 			for i := 0; i < typ.NumField(); i++ {
-				fields = append(fields, strings.Split(typ.Field(i).Tag.Get("json"), ",")[0])
+				tag := typ.Field(i).Tag.Get("json")
+				field := strings.Split(tag, ",")[0]
+				fields = append(fields, field)
+				if !strings.Contains(tag, "omitempty") {
+					mandatory = append(mandatory, field)
+				}
 			}
 			slices.Sort(keys)
 			slices.Sort(required)
 			slices.Sort(fields)
-			if !slices.Equal(keys, fields) || !slices.Equal(required, fields) || definition["additionalProperties"] != false {
+			slices.Sort(mandatory)
+			if !slices.Equal(keys, fields) || !slices.Equal(required, mandatory) || definition["additionalProperties"] != false {
 				t.Fatalf("schema and Go fields disagree: keys %v required %v fields %v", keys, required, fields)
 			}
 		})
 	}
 	properties := schema["properties"].(map[string]any)
-	if properties["version"].(map[string]any)["const"] != float64(ReceiptVersion) {
+	if !reflect.DeepEqual(properties["version"].(map[string]any)["enum"], []any{float64(1), float64(ReceiptVersion)}) {
 		t.Fatal("schema version differs")
 	}
 	assertEnum := func(property any, values ...string) {

@@ -30,6 +30,12 @@ complete ready inputs and passing required checks. Completed failures and errors
 can be reported honestly; they cannot be relabeled as success. Missing identity
 resolution or a changed lifecycle denies publication with an explicit reason.
 
+With explicit native result reuse, trusted orchestration may include locally
+authenticated prior pure-check computation in a new owned run. The receipt
+records that provenance; required prerequisites, fresh identity, cleanup, and
+persistence still gate success. This does not turn imported JSON into an
+authorized reporting lifecycle. See [result caching](caches.md#reuse-pure-native-results).
+
 An imported JSON receipt is useful local evidence but has no process-local run
 capability. Edited receipt copies cannot alter sealed evidence. These safeguards
 prevent accidental imports and stale or mismatched reports. They do not stop

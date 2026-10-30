@@ -59,7 +59,7 @@ the detailed evidence; no private source or logs are reproduced here.
 | NIC-68: advisory rollout | [Private PR 81](https://github.com/smeltery/nightshift/pull/81), `5081f1d` | Merged after verification at `6b667c2`. Six live advisory cases and real Lefthook adoption/rollback passed; retained hosted triggers and infrastructure limitations are recorded privately. |
 | NIC-69: user documentation | [PR 22](https://github.com/smeltery/bellows/pull/22), `28eed73` | Merged after green checks. Public setup, receipt inspection, intentional reporting, stale recovery and permission guidance match shipped commands. |
 | NIC-70: acceptance | This audit | Accepted advisory MVP evidence: prerequisites merged, final private integration passed, public validation recorded below. Hosted billing exceptions and trust limitations remain explicit. |
-| NIC-71: successful-result reuse | Post-acceptance optimization | Deferred by design. Not implemented or enabled in this release. Requires independent provenance, complete identity/plan invalidation, expiry and failure tests; it must not block the advisory MVP. |
+| NIC-71: successful-result reuse | [Post-acceptance result reuse](caches.md) | Excluded from the audited MVP. The subsequent opt-in implementation adds authenticated local provenance, full identity/plan/producer invalidation, fixed expiry and forced execution. Installation, preparation and service checks remain outside reuse. |
 
 ## Original repository improvements
 
@@ -189,5 +189,6 @@ identity, receipt and measurement evidence stays in the private archive.
 This accepts advisory local verification, not protected merge authority or
 universal platform parity. Hosted CI stays enabled and the documented private
 billing exceptions do not imply successful hosted execution. Successful-result
-caching is not implemented; its separate work starts only after this acceptance
-is merged.
+caching was excluded from this MVP acceptance and implemented afterward as a
+separate optimization. Its behavior and limitations are documented in
+[result caching](caches.md); it remains disabled by default.

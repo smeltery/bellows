@@ -26,6 +26,9 @@ func TestNativeProfilesEndToEnd(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if file.destination == ".bellows.yml" {
+			data = bytes.Replace(data, []byte("      verify:\n"), []byte("      verify:\n        cacheable: true\n"), 1)
+		}
 		destination := filepath.Join(root, file.destination)
 		if err := os.MkdirAll(filepath.Dir(destination), 0700); err != nil {
 			t.Fatal(err)
@@ -51,6 +54,8 @@ func TestNativeProfilesEndToEnd(t *testing.T) {
 	git("add", ".")
 	git("commit", "-m", "fixture")
 	if os.Getenv("BELLOWS_NATIVE_FLOX_INTEGRATION") != "1" {
+		t.Setenv("HOME", t.TempDir())
+		t.Setenv("XDG_CACHE_HOME", t.TempDir())
 		bin := t.TempDir()
 		script := "#!/bin/sh\nif [ \"$1\" = --version ]; then echo flox-fixture; exit; fi\n[ \"$1\" = activate ] && [ \"$2\" = -- ] || exit 93\nshift 2\nexec \"$@\"\n"
 		if err := os.WriteFile(filepath.Join(bin, "flox"), []byte(script), 0700); err != nil {
@@ -60,13 +65,13 @@ func TestNativeProfilesEndToEnd(t *testing.T) {
 	}
 	t.Setenv("GH_TOKEN", "synthetic-publisher-secret")
 	t.Setenv("BELLOWS_REPORT_TOKEN", "synthetic-publisher-secret")
-	execute := func(profile string, want v.State) verificationrun.Outcome {
+	execute := func(profile string, want v.State, flags ...string) verificationrun.Outcome {
 		t.Helper()
 		command := newRootCmd("test")
 		var stdout, stderr bytes.Buffer
 		command.SetOut(&stdout)
 		command.SetErr(&stderr)
-		command.SetArgs([]string{"--repo", root, "verify", "--repository", "example/project", "--base", "main", "--profile", profile, "--format", "json", "--artifacts", privateVerificationDir(t)})
+		command.SetArgs(append([]string{"--repo", root, "verify", "--repository", "example/project", "--base", "main", "--profile", profile, "--format", "json", "--artifacts", privateVerificationDir(t)}, flags...))
 		err := command.Execute()
 		if (err == nil) != (want == v.Passed) {
 			t.Fatalf("profile %s error=%v stderr=%s stdout=%s", profile, err, &stderr, &stdout)
@@ -95,6 +100,27 @@ func TestNativeProfilesEndToEnd(t *testing.T) {
 	second := execute("native", v.Passed)
 	if first.Receipt.Identity != second.Receipt.Identity {
 		t.Fatal("identical profile inputs changed identity")
+	}
+	if os.Getenv("BELLOWS_NATIVE_FLOX_INTEGRATION") != "1" {
+		fresh := execute("native", v.Passed, "--reuse-results")
+		cached := execute("native", v.Passed, "--reuse-results")
+		forced := execute("native", v.Passed, "--reuse-results", "--force-rerun")
+		disabled := execute("native", v.Passed)
+		for _, result := range cached.Receipt.Results {
+			if (result.Reuse != nil) != (result.ID == "profile/native/verify") {
+				t.Fatalf("unexpected reuse: %+v", result)
+			}
+		}
+		for _, out := range []verificationrun.Outcome{fresh, forced, disabled} {
+			for _, result := range out.Receipt.Results {
+				if result.Reuse != nil {
+					t.Fatalf("fresh check reused: %+v", result)
+				}
+			}
+		}
+		if cached.Receipt.RunID == fresh.Receipt.RunID {
+			t.Fatal("reuse did not create fresh lifecycle")
+		}
 	}
 	equivalent := execute("equivalent", v.Passed)
 	if first.Receipt.Identity.Fingerprints.Config == equivalent.Receipt.Identity.Fingerprints.Config {

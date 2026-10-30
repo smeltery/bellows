@@ -1,7 +1,8 @@
-# Reusing downloads and Docker layers
+# Reusing downloads, results, and Docker layers
 
-Verification always installs dependencies and executes its checks. Bellows never
-caches `node_modules`, successful test results, receipts, or publisher credentials.
+Verification executes every check by default. Bellows never restores `node_modules`
+or publisher credentials. Successful pure native checks can be reused only with
+the separate result-cache opt-in described below.
 Its optional native cache adapter points npm at a private download store using
 `npm_config_cache`; npm logs are disabled for that store. npm validates cached
 content and refetches corrupt data when online. See the [npm cache documentation](https://docs.npmjs.com/cli/cache/).
@@ -125,3 +126,57 @@ checks identical image IDs and a `CACHED` build step, rejects cross-repository
 binding, and verifies no containers, volumes or custom networks remain. The shared
 Ubuntu service CI job runs this fixture alongside concurrent service lifecycle
 tests. Docker Desktop cache parity remains unmeasured.
+
+## Reuse pure native results
+
+Result reuse is off by default. Mark only deterministic checks that need no
+external services and produce no files or state needed by later checks:
+
+```yaml
+profiles:
+  native:
+    executor: flox
+    checks:
+      harness:
+        argv: [node, --test, scripts/harness.test.mjs]
+        cacheable: true
+```
+
+```sh
+bellows verify --repository example/project --base origin/main \
+  --profile native --reuse-results
+bellows verify --repository example/project --base origin/main \
+  --profile native --reuse-results --force-rerun
+```
+
+`cacheable` must be a boolean and defaults to false. `--reuse-results` requires
+`--profile`; `--force-rerun` requires `--reuse-results` and bypasses reads while
+refreshing eligible results. Neither flag enables npm download caching, and
+`--cold-cache` alone does not force tests to execute. Add `--force-rerun` when
+measuring fresh execution with result reuse enabled.
+
+Do not mark installation, build preparation, migrations, service startup, image
+builds, network checks, or checks with required output artifacts as cacheable.
+Bellows does not restore their side effects. The operator is responsible for
+choosing pure checks; a successful exit does not establish purity.
+
+The private `bellows/results` store binds entries to the complete verification
+identity, check definition, and executing Bellows binary. Head, base, tree,
+configuration, toolchain, platform, environment, or binary changes cause a miss.
+Unlike downloads, results do not survive source-only changes. Entries expire
+after 24 hours; retention is bounded to 128 entries and 16 MiB. Missing, expired,
+or corrupt entries execute normally. Operational cache failures warn and execute
+rather than count as a successful check.
+
+A reused check still requires passing prerequisites and a fresh run lifecycle.
+Its new receipt records reuse provenance instead of claiming fresh execution.
+Only locally authenticated successful evidence is eligible; importing a JSON
+receipt does not seed the store. Same-user hostile code can access the local
+key, so this is accidental-corruption protection on a trusted workstation, not
+an isolation or remote-attestation boundary. Keep hosted CI and required checks.
+
+For comparisons, keep the launcher path, binary, committed source, `PATH`,
+`HOME`, and `TMPDIR` stable and use `umask 077`. Record hashes of those three
+environment values, not a complete environment dump. Compare cache-hit evidence
+and per-check timing separately from whole-pipeline timing; skipped pure work
+cannot explain unrelated service or download variability.

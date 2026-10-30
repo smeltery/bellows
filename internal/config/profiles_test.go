@@ -17,6 +17,9 @@ func profileConfig(t *testing.T, body string) (*Config, error) {
 }
 func TestNativeProfileValidation(t *testing.T) {
 	for name, body := range map[string]string{
+		"null cacheable":        "  native: {executor: flox, checks: {test: {argv: [echo], cacheable: null}}}",
+		"string cacheable":      "  native: {executor: flox, checks: {test: {argv: [echo], cacheable: 'true'}}}",
+		"number cacheable":      "  native: {executor: flox, checks: {test: {argv: [echo], cacheable: 1}}}",
 		"null profile":          "  bad: null",
 		"null profiles":         "  null",
 		"sequence profiles":     "  []",
@@ -67,5 +70,16 @@ func TestNativeCheckPlanCopiesAndPrefixes(t *testing.T) {
 	data, err := Marshal(cfg)
 	if err != nil || !strings.Contains(string(data), "profiles:") {
 		t.Fatalf("marshal: %v", err)
+	}
+}
+
+func TestNativeCacheabilityExplicitOptIn(t *testing.T) {
+	cfg, err := profileConfig(t, "  native: {executor: flox, checks: {a: {argv: [echo]}, b: {argv: [echo], cacheable: true}, c: {argv: [echo], cacheable: false}}}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	checks := cfg.Profiles["native"].Checks
+	if checks["a"].Cacheable || !checks["b"].Cacheable || checks["c"].Cacheable {
+		t.Fatal("cacheability did not preserve explicit opt-in")
 	}
 }

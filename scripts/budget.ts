@@ -1,5 +1,5 @@
 const files = (await Bun.$`git ls-files --cached --others --exclude-standard '*.go' 'scripts/*'`.text()).trim().split("\n");
-const limits = { go: 7000, tooling: 80 };
+const limits = { go: 7500, tooling: 80 };
 const counts = { go: 0, tooling: 0 };
 for (const file of files.filter((file) => !file.endsWith("_test.go"))) {
   const kind = file.endsWith(".go") ? "go" : "tooling";

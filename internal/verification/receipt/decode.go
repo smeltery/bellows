@@ -52,6 +52,15 @@ func Decode(data []byte) (v.Receipt, error) {
 			return r, fmt.Errorf("%s must use UTC Z notation", key)
 		}
 	}
+	for _, raw := range object["results"].([]any) {
+		if provenance, ok := raw.(map[string]any)["reuse"].(map[string]any); ok {
+			for _, key := range []string{"completed_at", "expires_at"} {
+				if value, ok := provenance[key].(string); ok && !strings.HasSuffix(value, "Z") {
+					return r, fmt.Errorf("reuse %s must use UTC Z notation", key)
+				}
+			}
+		}
+	}
 	return r, Validate(r)
 }
 

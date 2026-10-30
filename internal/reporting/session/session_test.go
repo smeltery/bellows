@@ -18,9 +18,13 @@ func evidence() v.Receipt {
 	return v.Receipt{Version: 1, RunID: "fixture", StartedAt: time.Now().UTC(), Input: v.Ready, Identity: v.Identity{Repository: "example/repo", Head: strings.Repeat("b", 40), Base: strings.Repeat("c", 40), Tree: strings.Repeat("d", 40), Mode: v.ModeMerge, Executor: v.ExecutorFlox, Platform: "linux/amd64", Fingerprints: v.Fingerprints{Workflow: hash, Config: hash, Policy: hash, Dependencies: hash, Toolchain: hash, Environment: hash}}, Checks: []v.Check{{ID: "test", Required: true, Needs: []string{}}}, Results: []v.Result{}}
 }
 func TestAdvisoryLifecycleAgainstHTTP(t *testing.T) {
-	for _, scenario := range []string{"passed", "failed", "cancelled", "error", "head moved", "base moved", "toolchain moved", "api error", "duplicate"} {
+	for _, scenario := range []string{"passed", "failed", "cancelled", "error", "head moved", "base moved", "toolchain moved", "api error", "duplicate", "reused passed", "reused head moved", "reused base moved", "reused toolchain moved"} {
 		t.Run(scenario, func(t *testing.T) {
+			kind := strings.TrimPrefix(scenario, "reused ")
 			initial := evidence()
+			if kind != scenario {
+				initial.Version = v.ReceiptVersion
+			}
 			head, base := initial.Identity.Head, initial.Identity.Base
 			current := initial.Identity
 			var statuses []string
@@ -71,8 +75,11 @@ func TestAdvisoryLifecycleAgainstHTTP(t *testing.T) {
 			final.CompletedAt = &finished
 			code := 0
 			result := v.Result{ID: "test", State: v.Passed, ExitCode: &code}
+			if kind != scenario {
+				result.Reuse = &v.Reuse{ReceiptID: strings.Repeat("a", 64), RunID: "prior-run", CompletedAt: initial.StartedAt.Add(-time.Minute), ExpiresAt: initial.StartedAt.Add(time.Hour)}
+			}
 			want := "success"
-			switch scenario {
+			switch kind {
 			case "failed":
 				code = 1
 				result.State = v.Failed
@@ -96,7 +103,7 @@ func TestAdvisoryLifecycleAgainstHTTP(t *testing.T) {
 			}
 			final.Results = []v.Result{result}
 			err = reporter.Finish(context.Background(), final)
-			denied := scenario == "head moved" || scenario == "base moved" || scenario == "toolchain moved" || scenario == "api error"
+			denied := kind == "head moved" || kind == "base moved" || kind == "toolchain moved" || kind == "api error"
 			if (err != nil) != denied {
 				t.Fatalf("finish: %v", err)
 			}
@@ -107,10 +114,10 @@ func TestAdvisoryLifecycleAgainstHTTP(t *testing.T) {
 			} else if len(statuses) != 2 || statuses[1] != want {
 				t.Fatalf("statuses=%v", statuses)
 			}
-			if lookupCount < 2 && scenario != "toolchain moved" {
+			if lookupCount < 2 && kind != "toolchain moved" {
 				t.Fatal("terminal status did not reread PR")
 			}
-			if scenario == "duplicate" {
+			if kind == "duplicate" {
 				if err := reporter.Finish(context.Background(), final); err == nil || len(statuses) != 2 {
 					t.Fatal("duplicate completion accepted")
 				}

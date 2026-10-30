@@ -25,6 +25,7 @@ import (
 	"github.com/smeltery/bellows/internal/runner"
 	v "github.com/smeltery/bellows/internal/verification"
 	"github.com/smeltery/bellows/internal/verification/actexec"
+	"github.com/smeltery/bellows/internal/verification/resultcache"
 	verificationrun "github.com/smeltery/bellows/internal/verification/run"
 	"github.com/smeltery/bellows/internal/verification/worktree"
 	"github.com/smeltery/bellows/internal/workflow"
@@ -33,7 +34,7 @@ import (
 
 func newVerifyCmd(opts *cliOptions) *cobra.Command {
 	var repository, base, head, mode, daemon, format, artifacts, leases, profile string
-	var downloadCache, coldCache bool
+	var downloadCache, coldCache, reuseResults, forceRerun bool
 	cmd := &cobra.Command{Use: "verify", Short: "Verify committed changes locally and save an advisory receipt", Args: cobra.NoArgs}
 	report := addReportingFlags(cmd)
 	cmd.AddCommand(newCapabilityCmd())
@@ -46,6 +47,12 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 		}
 		if profile == "" && (downloadCache || coldCache) {
 			return fmt.Errorf("download-cache flags require --profile; cold Docker runs require a new daemon")
+		}
+		if reuseResults && profile == "" {
+			return fmt.Errorf("--reuse-results requires --profile")
+		}
+		if forceRerun && !reuseResults {
+			return fmt.Errorf("--force-rerun requires --reuse-results")
 		}
 		if report.enabled && mode != v.ModeMerge {
 			return fmt.Errorf("advisory reporting requires merge verification mode")
@@ -76,6 +83,15 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 		}
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
+		var reuse verificationrun.Reuse
+		if reuseResults {
+			store, cacheErr := resultcache.Open(filepath.Join(cache, "bellows", "results"), root)
+			if cacheErr != nil {
+				fmt.Fprintln(cmd.ErrOrStderr(), "warning: result cache unavailable; executing checks")
+			} else {
+				reuse = store
+			}
+		}
 		var current func(context.Context) (v.Identity, error)
 		reporter, err := report.create(repository, func(ctx context.Context) (v.Identity, error) {
 			if current == nil {
@@ -92,7 +108,7 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 		}
 		out, runErr := verificationrun.Execute(ctx, verificationrun.Options{
 			Worktree: worktree.Options{Root: root, Repository: repository, Base: base, Head: head, Mode: mode}, Artifacts: artifacts,
-			Stdout: cmd.ErrOrStderr(), Stderr: cmd.ErrOrStderr(), Start: start,
+			Stdout: cmd.ErrOrStderr(), Stderr: cmd.ErrOrStderr(), Start: start, Reuse: reuse, ForceRerun: forceRerun,
 			Build: func(ctx context.Context, prepared *worktree.Run) (verificationrun.Plan, error) {
 				var built verificationrun.Plan
 				var err error
@@ -139,6 +155,8 @@ func newVerifyCmd(opts *cliOptions) *cobra.Command {
 	cmd.Flags().StringVar(&base, "base", "", "target branch or commit")
 	cmd.Flags().StringVar(&head, "head", "HEAD", "source branch or commit")
 	cmd.Flags().StringVar(&mode, "mode", v.ModeMerge, "input mode: merge or head")
+	cmd.Flags().BoolVar(&reuseResults, "reuse-results", false, "reuse eligible successful native checks from the private local result store")
+	cmd.Flags().BoolVar(&forceRerun, "force-rerun", false, "execute every check despite --reuse-results and refresh eligible results")
 	cmd.Flags().BoolVar(&downloadCache, "download-cache", false, "reuse repository-scoped npm downloads for native profiles")
 	cmd.Flags().BoolVar(&coldCache, "cold-cache", false, "use a disposable empty npm download store for native profiles")
 	cmd.Flags().StringVar(&profile, "profile", "", "explicit native Flox verification profile (without --daemon)")

@@ -16,8 +16,9 @@ type NativeProfile struct {
 	Checks   map[string]NativeCheck `yaml:"checks"`
 }
 type NativeCheck struct {
-	Argv  []string `yaml:"argv"`
-	Needs []string `yaml:"needs,omitempty"`
+	Cacheable bool     `yaml:"cacheable,omitempty"`
+	Argv      []string `yaml:"argv"`
+	Needs     []string `yaml:"needs,omitempty"`
 }
 
 var profileName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
@@ -42,6 +43,12 @@ func (p *NativeProfile) UnmarshalYAML(node *yaml.Node) error {
 			}
 			for k := 0; k < len(check.Content); k += 2 {
 				field, list := check.Content[k].Value, check.Content[k+1]
+				if field == "cacheable" {
+					if list.Kind != yaml.ScalarNode || list.Tag != "!!bool" {
+						return fmt.Errorf("cacheable must be a boolean")
+					}
+					continue
+				}
 				if (field != "argv" && field != "needs") || list.Kind != yaml.SequenceNode {
 					return fmt.Errorf("unsupported check field or invalid list: %s", field)
 				}

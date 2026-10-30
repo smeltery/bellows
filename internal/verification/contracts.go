@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	ReceiptVersion = 1
+	ReceiptVersion = 2
 	ModeMerge      = "merge"
 	ModeHead       = "head"
 	ExecutorAct    = "act"
@@ -62,7 +62,15 @@ type Check struct {
 	Needs    []string `json:"needs"`
 }
 
+type Reuse struct {
+	ReceiptID   string    `json:"receipt_id"`
+	RunID       string    `json:"run_id"`
+	CompletedAt time.Time `json:"completed_at"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}
+
 type Result struct {
+	Reuse      *Reuse `json:"reuse,omitempty"`
 	ID         string `json:"id"`
 	State      State  `json:"state"`
 	ExitCode   *int   `json:"exit_code"`

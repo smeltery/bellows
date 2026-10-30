@@ -41,7 +41,7 @@ func TestStrictDecode(t *testing.T) {
 		"null needs":     strings.Replace(string(data), `"needs":[]`, `"needs":null`, 1),
 		"offset":         strings.ReplaceAll(string(data), `00Z`, `00+00:00`),
 		"trailing":       string(data) + ` {}`,
-		"version":        strings.Replace(string(data), `"version":1`, `"version":2`, 1),
+		"version":        strings.Replace(string(data), `"version":1`, `"version":3`, 1),
 		"invalid UTF8":   string(append(data, 0xff)),
 		"oversized":      strings.Repeat(" ", MaxBytes+1),
 		"null":           `null`, "truncated": string(data[:len(data)-1]),
