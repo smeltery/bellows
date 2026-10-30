@@ -90,6 +90,20 @@ serialized overall-success flag to trust instead of recomputing aggregation.
 
 ## Receipt lifecycle and compatibility
 
+New runs write receipt v2; strict decoding still accepts v1 without changing its
+canonical content or digest. Only v2 permits an optional result `reuse` object:
+original receipt digest, run ID, completion time and expiry. Reused results are
+passed with exit zero and zero execution duration in the new run. UTC times must
+identify an earlier completed run whose entry was valid when this run started.
+An imported receipt, including its provenance fields, never authorizes reuse.
+
+Native reuse requires explicit check eligibility and an authenticated local
+entry bound to the complete ordered plan, inputs and producer binary. Every
+invocation creates a new run and receipt. Admission requires all checks to pass,
+fresh identities, pristine inputs, successful cleanup and receipt persistence.
+An in-process seal exposes only freshly executed eligible results; cache hits
+cannot renew their original expiry. Cache errors warn and execute the check.
+
 Receipts contain a schema version, run ID, UTC `started_at`/`completed_at`, input
 state, full identity, selected checks and observed results. Use RFC 3339 UTC
 strings ending in `Z`; `completed_at` is null while a run is incomplete. Terminal

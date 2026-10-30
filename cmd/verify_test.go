@@ -150,3 +150,27 @@ func privateVerificationDir(t *testing.T) string {
 	}
 	return path
 }
+
+func TestResultReuseFlagValidation(t *testing.T) {
+	for _, tc := range []struct {
+		flags   []string
+		message string
+	}{
+		{[]string{"--daemon", "unix:///tmp/socket", "--reuse-results"}, "--reuse-results requires --profile"},
+		{[]string{"--profile", "native", "--force-rerun"}, "--force-rerun requires --reuse-results"},
+	} {
+		command := newRootCmd("test")
+		command.SetOut(&bytes.Buffer{})
+		command.SetErr(&bytes.Buffer{})
+		command.SetArgs(append([]string{"verify", "--repository", "example/project", "--base", "main"}, tc.flags...))
+		if err := command.Execute(); err == nil || !strings.Contains(err.Error(), tc.message) {
+			t.Fatalf("expected %q, got %v", tc.message, err)
+		}
+	}
+	command := newVerifyCmd(&cliOptions{})
+	for _, flag := range []string{"reuse-results", "force-rerun"} {
+		if value, err := command.Flags().GetBool(flag); err != nil || value {
+			t.Fatalf("%s must default off: %v", flag, err)
+		}
+	}
+}

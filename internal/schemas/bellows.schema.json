@@ -55,6 +55,10 @@
                     "pattern": "^[^\\u0000]*$"
                   }
                 },
+                "cacheable": {
+                  "type": "boolean",
+                  "default": false
+                },
                 "needs": {
                   "type": "array",
                   "uniqueItems": true,

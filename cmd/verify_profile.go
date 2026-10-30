@@ -33,6 +33,12 @@ func buildNativeVerificationPlan(ctx context.Context, name string, prepared *wor
 	for _, check := range checks {
 		out.Targets = append(out.Targets, changed.Target{Check: check})
 	}
+	out.Cacheable = make(map[string]bool)
+	for id, check := range cfg.Profiles[name].Checks {
+		if check.Cacheable {
+			out.Cacheable["profile/"+name+"/"+id] = true
+		}
+	}
 	out.Argv = argv
 	out.Executor = flox.Executor{}
 	out.Identity.Executor = v.ExecutorFlox

@@ -61,8 +61,11 @@ lock and installed Flox version. Fresh identity checks reread the host Flox
 version and fingerprint `PATH`, `HOME`, and `TMPDIR`, while retaining the
 immutable committed configuration and lock after worktree cleanup. Results
 from a different profile, executor,
-platform, or inputs are not interchangeable. All checks run for the selected
-profile; workflow path filters do not omit native required checks.
+platform, or inputs are not interchangeable. All checks remain required for the selected
+profile; workflow path filters do not omit native checks. Explicitly pure checks
+may set `cacheable: true`; reuse additionally requires `--reuse-results`. The
+default is fresh execution. See [result caching](caches.md#reuse-pure-native-results)
+for side-effect restrictions, expiry, provenance, and `--force-rerun`.
 
 See [security](security.md) and [local differences](local-differences.md) for the limits of workstation evidence.
 

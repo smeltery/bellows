@@ -39,17 +39,18 @@ Bellows hooks in another project, use the [user hook guide](pre-commit.md).
 ## Keep changes small
 
 `scripts/budget.ts` enforces nonblank line budgets for production Go and custom
-check scripts (7,000 and 80 lines respectively). Tests are excluded so coverage is not discouraged. Prefer shared
+check scripts (7,500 and 80 lines respectively). Tests are excluded so coverage is not discouraged. Prefer shared
 Make targets and existing tools over new wrappers. Any budget increase should
 include a rationale in the pull request.
 
-The 7,000-line production budget allocates 6,208 measured lines for verification,
-native profiles and scoped download caches, about 245 for explicit reporting,
-260 for stale-input guards, and 30 for targeted cleanup/submodule handling:
-approximately 6,743 lines combined. The remaining 257 lines are bounded integration
-headroom, including the separately scoped result-reuse work. This supersedes the
-6,500-line allowance. No tooling allowance increased. The hard limit applies to
-the combined implementation; later increases require another measured review.
+The post-acceptance result-reuse change adds 645 measured production lines to the
+6,836-line MVP: 419 for authenticated bounded storage and filesystem safety,
+171 for run snapshots, freshness checks and sealed admission, and 55 for strict
+receipt compatibility, configuration and CLI wiring. The combined 7,481 lines
+fit a 7,500-line ceiling, superseding the 7,000-line allowance. This allocation
+covers explicit provenance, validation and filesystem guards with 19 lines of
+remaining headroom. No tooling allowance increased; later increases require
+another measured review.
 
 Markdown uses markdownlint; all fenced Mermaid diagrams must parse with Mermaid.
 Bun dependencies are pinned in `package.json` and `bun.lock`. After a toolchain

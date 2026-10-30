@@ -21,7 +21,7 @@ var (
 func Validate(r v.Receipt) error {
 	id, f := r.Identity, r.Identity.Fingerprints
 	required := func(value string) bool { return r.Input == v.Ready || value != "" }
-	if r.Version != v.ReceiptVersion || r.RunID == "" ||
+	if (r.Version != 1 && r.Version != v.ReceiptVersion) || r.RunID == "" ||
 		(required(id.Repository) && !repository.MatchString(id.Repository)) ||
 		(r.Input == v.Ready && id.Platform == "") ||
 		(required(id.Mode) && id.Mode != v.ModeHead && id.Mode != v.ModeMerge) ||
@@ -111,6 +111,11 @@ func Validate(r v.Receipt) error {
 		}
 		if r.CompletedAt != nil && (result.State == v.Pending || result.DurationMS > r.CompletedAt.Sub(r.StartedAt).Milliseconds()) {
 			return fmt.Errorf("result contradicts receipt completion")
+		}
+		if reused := result.Reuse; reused != nil {
+			if r.Version < 2 || result.State != v.Passed || result.DurationMS != 0 || !digest.MatchString(reused.ReceiptID) || reused.RunID == "" || reused.RunID == r.RunID || reused.CompletedAt.IsZero() || reused.CompletedAt.Location() != time.UTC || reused.ExpiresAt.Location() != time.UTC || reused.CompletedAt.After(r.StartedAt) || !reused.ExpiresAt.After(r.StartedAt) || !reused.ExpiresAt.After(reused.CompletedAt) {
+				return fmt.Errorf("invalid reuse provenance")
+			}
 		}
 		results[result.ID] = result
 	}

@@ -2,8 +2,10 @@
 package run
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -19,15 +21,18 @@ import (
 )
 
 type Plan struct {
-	Current  func(context.Context) (v.Identity, error)
-	Identity v.Identity
-	Targets  []changed.Target
-	Executor v.Executor
-	Argv     map[string][]string
-	Env      []string
-	Close    func() error
+	Cacheable map[string]bool
+	Current   func(context.Context) (v.Identity, error)
+	Identity  v.Identity
+	Targets   []changed.Target
+	Executor  v.Executor
+	Argv      map[string][]string
+	Env       []string
+	Close     func() error
 }
 type Options struct {
+	Reuse          Reuse
+	ForceRerun     bool
 	Worktree       worktree.Options
 	Artifacts      string
 	Build          func(context.Context, *worktree.Run) (Plan, error)
@@ -35,6 +40,7 @@ type Options struct {
 	Stdout, Stderr io.Writer
 }
 type Outcome struct {
+	seal    *successSeal
 	Receipt v.Receipt `json:"receipt"`
 	Path    string    `json:"path"`
 	State   v.State   `json:"state"`
@@ -44,9 +50,22 @@ func Execute(ctx context.Context, opts Options) (out Outcome, err error) {
 	if opts.Stderr == nil {
 		opts.Stderr = io.Discard
 	}
+	var plan Plan
+	var descriptor []byte
+	var executed []string
 	out.Receipt = v.Receipt{Version: v.ReceiptVersion, RunID: rand.Text(), StartedAt: time.Now().UTC(), Input: v.Invalid, Checks: []v.Check{}, Results: []v.Result{}, Identity: v.Identity{Repository: opts.Worktree.Repository, Mode: opts.Worktree.Mode}}
 	// Persist after cleanup so cleanup failures cannot leave a successful receipt.
 	defer func() {
+		if (opts.Reuse != nil || len(executed) > 0 && plan.Current != nil) && err == nil && out.Receipt.Input == v.Ready {
+			freshCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			freshErr := currentIdentity(freshCtx, plan)
+			cancel()
+			refs, refsErr := changed.Discover(opts.Worktree.Root, changed.Options{Scope: changed.BaseHead, Base: opts.Worktree.Base, Head: opts.Worktree.Head})
+			if freshErr != nil || refsErr != nil || refs.Head != plan.Identity.Head || refs.Base != plan.Identity.Base {
+				out.Receipt.Input = v.Stale
+				err = errors.Join(freshErr, refsErr, errors.New("inputs changed before cache admission"))
+			}
+		}
 		seen := map[string]bool{}
 		for _, result := range out.Receipt.Results {
 			seen[result.ID] = true
@@ -71,6 +90,15 @@ func Execute(ctx context.Context, opts Options) (out Outcome, err error) {
 			out.State = v.Error
 		}
 		err = errors.Join(err, saveErr)
+		if err == nil && ctx.Err() == nil && out.State == v.Passed && len(executed) > 0 {
+			if sealErr := sealOutcome(ctx, &out, plan, descriptor, executed); sealErr != nil {
+				fmt.Fprintf(opts.Stderr, "result reuse disabled: %v\n", sealErr)
+			} else if opts.Reuse != nil {
+				if cacheErr := opts.Reuse.Save(out); cacheErr != nil {
+					fmt.Fprintf(opts.Stderr, "result cache write: %v\n", cacheErr)
+				}
+			}
+		}
 	}()
 	prepared, err := worktree.Prepare(ctx, opts.Worktree)
 	if err != nil {
@@ -91,7 +119,7 @@ func Execute(ctx context.Context, opts Options) (out Outcome, err error) {
 		return out, fmt.Errorf("verification planner is required")
 	}
 	expected, checkout := prepared.Identity, prepared.Path
-	plan, err := opts.Build(ctx, prepared)
+	plan, err = opts.Build(ctx, prepared)
 	if plan.Close != nil {
 		defer func() {
 			if cleanupErr := plan.Close(); cleanupErr != nil {
@@ -105,6 +133,10 @@ func Execute(ctx context.Context, opts Options) (out Outcome, err error) {
 	}
 	if prepared.Identity != expected || prepared.Path != checkout || plan.Identity.Repository != expected.Repository || plan.Identity.Head != expected.Head || plan.Identity.Base != expected.Base || plan.Identity.Tree != expected.Tree || plan.Identity.Mode != expected.Mode {
 		return out, fmt.Errorf("planner changed pinned input identity")
+	}
+	descriptor, err = json.Marshal(plan.cachePlan())
+	if err != nil {
+		return out, err
 	}
 	out.Receipt.Identity = plan.Identity
 	out.Receipt.Input = v.Ready
@@ -142,13 +174,40 @@ func Execute(ctx context.Context, opts Options) (out Outcome, err error) {
 		if ctx.Err() != nil {
 			result.State = v.Cancelled
 		} else if ready {
-			result, err = plan.Executor.Run(ctx, v.Request{RunID: out.Receipt.RunID, Worktree: checkout, Identity: plan.Identity, Check: target.Check, Argv: plan.Argv[target.Check.ID], Workflow: target.Workflow, Job: target.Job, Matrix: target.Matrix, Env: plan.Env, Stdout: opts.Stdout, Stderr: opts.Stderr})
-			if err != nil && result.State != v.Cancelled && result.State != v.Unsupported {
-				result = v.Result{ID: target.Check.ID, State: v.Error}
+			hit := false
+			eligible := plan.Identity.Executor == v.ExecutorFlox && plan.Cacheable[target.Check.ID]
+			if eligible && opts.Reuse != nil && !opts.ForceRerun {
+				if freshErr := currentIdentity(ctx, plan); freshErr != nil {
+					out.Receipt.Input = v.Stale
+					return out, freshErr
+				}
+				snapshot, copyErr := copyCachePlan(descriptor)
+				if copyErr != nil {
+					return out, copyErr
+				}
+				candidate, found, cacheErr := opts.Reuse.Lookup(snapshot, target.Check.ID)
+				if cacheErr == nil && found {
+					cacheErr = cachedResult(candidate, target.Check.ID, out.Receipt)
+					if cacheErr == nil {
+						result, hit = candidate, true
+					}
+				}
+				if cacheErr != nil {
+					fmt.Fprintf(opts.Stderr, "result cache miss: %v\n", cacheErr)
+				}
 			}
-			if result.ID != target.Check.ID {
-				result = v.Result{ID: target.Check.ID, State: v.Error}
-				err = fmt.Errorf("executor returned a different check identity")
+			if !hit {
+				result, err = plan.Executor.Run(ctx, v.Request{RunID: out.Receipt.RunID, Worktree: checkout, Identity: plan.Identity, Check: target.Check, Argv: plan.Argv[target.Check.ID], Workflow: target.Workflow, Job: target.Job, Matrix: target.Matrix, Env: plan.Env, Stdout: opts.Stdout, Stderr: opts.Stderr})
+				if err != nil && result.State != v.Cancelled && result.State != v.Unsupported {
+					result = v.Result{ID: target.Check.ID, State: v.Error}
+				}
+				if result.ID != target.Check.ID || result.Reuse != nil {
+					result = v.Result{ID: target.Check.ID, State: v.Error}
+					err = fmt.Errorf("executor returned a different check identity")
+				}
+				if eligible && result.State == v.Passed && err == nil {
+					executed = append(executed, target.Check.ID)
+				}
 			}
 		}
 		out.Receipt.Results = append(out.Receipt.Results, result)
@@ -172,6 +231,17 @@ func Execute(ctx context.Context, opts Options) (out Outcome, err error) {
 	if current.Head != expected.Head || current.Base != expected.Base {
 		out.Receipt.Input = v.Stale
 		return out, fmt.Errorf("source head or base moved during verification")
+	}
+	actualPlan, marshalErr := json.Marshal(plan.cachePlan())
+	if marshalErr != nil || !bytes.Equal(actualPlan, descriptor) {
+		out.Receipt.Input = v.Invalid
+		return out, errors.New("verification plan changed")
+	}
+	if opts.Reuse != nil {
+		if freshErr := currentIdentity(inspectionCtx, plan); freshErr != nil {
+			out.Receipt.Input = v.Stale
+			return out, errors.Join(executionErr, freshErr)
+		}
 	}
 	return out, executionErr
 }
