@@ -20,7 +20,7 @@ command without an interactive shell, use `flox activate -- make check`.
 
 | Target | Purpose |
 | --- | --- |
-| `make validate` | Markdown, Mermaid syntax, LOC budget, workflow and release configuration |
+| `make validate` | Markdown, Mermaid syntax, brand asset integrity, LOC budget, workflow and release configuration |
 | `make check` | Validation, Go lint, race tests, coverage gate, build, Bellows self-checks |
 | `make test` | Race tests and minimum 60% total coverage |
 | `make release-check` | Full checks plus snapshot archive and binary smoke test |
@@ -53,6 +53,9 @@ remaining headroom. No tooling allowance increased; later increases require
 another measured review.
 
 Markdown uses markdownlint; all fenced Mermaid diagrams must parse with Mermaid.
+Brand assets live in [assets/brand](../assets/brand/README.md). `bun run brand:check`
+verifies their SHA-256 manifest as part of `make validate`. After intentionally
+changing an asset, review the preview and run `bun run brand:update`.
 Bun dependencies are pinned in `package.json` and `bun.lock`. After a toolchain
 change, update the Flox lockfile with `flox install` or `flox upgrade`, commit it,
 and run the checks again. Do not hand-edit the lockfile.

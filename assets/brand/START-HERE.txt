@@ -1,0 +1,87 @@
+BELLOWS / IDENTITY SYSTEM 02
+Proposed revision, October 30, 2026
+
+START HERE
+Open index.html for the responsive local guide. All assets and fonts are local.
+Open bellows-brand-guide-v2.pdf for the eight-page usage guide.
+brand-board.png gives a compact overview of the full system.
+
+DIRECTION
+Professional developer tooling with warmth and character.
+Primary line: Confidence, before the push.
+Secondary line: Keep the feedback close.
+Descriptor: Run GitHub Actions locally before you push.
+The three-fold mark converges into an air outlet, connecting the physical
+bellows with the idea of a shorter feedback loop.
+
+LOGO SYSTEM
+The primary horizontal lockup uses an Ember symbol and Ink wordmark.
+The reversed lockup uses Ember and Paper. Ink and Paper one-color masters,
+the standalone wordmark, symbol, stacked lockup, and app tile are supplied.
+All SVG artwork is genuine vector artwork with outlined lettering.
+Transparent PNG exports are included. Background-specific logo exports
+are intentionally opaque. SVG masters include clear space.
+Minimum lockup width: 160 px. Minimum symbol height: 16 px.
+Keep 1/4 symbol height clear around the visible artwork.
+Preserve proportions, spacing, lowercase lettering, and orientation.
+Do not add effects or decorations to the symbol or lettering.
+The adaptive favicon.svg follows the system light/dark preference.
+PNG favicons use the dark app tile for predictable contrast.
+
+COLOR
+Ink #191C22: primary text and dark surface.
+Paper #F5F3ED: main light surface.
+Ember #F06A43: brand emphasis and action fill; use Ink text on it.
+Clay #F2D8CC: supporting warm surface.
+Steel #626B75: secondary text on Paper.
+Burnt Ember #A9361C: accent text on Paper.
+On Ink, use Paper for primary text and #BBC2CA for secondary text.
+Ember text on Paper is not an approved ordinary text pairing.
+Semantic colors are specified for light surfaces: success #2C6B50,
+warning #805B00, error #B23635. Always include a visible status label.
+Approved normal-text pairings are recorded in tokens/brand-tokens.json.
+Colors are sRGB. Convert and proof separately for print.
+
+TYPE
+Space Grotesk 400/500/600/700: identity, headings, and body text.
+JetBrains Mono 400/500: commands, metadata, and technical data.
+Display 64/68/600. Heading 32/38/600. Body 16/26/400.
+Utility 12/18/500. Scale display type for the medium.
+Font originals and their SIL Open Font License notices are included.
+
+APPLICATIONS
+applications/social-preview.png: 1280 x 640.
+applications/readme-banner.png: 1600 x 480.
+applications/docs-header.png: 1600 x 900, documentation design concept.
+logos/png/app-icon.png: 512 px app/avatar tile.
+logos/png/icon-{size}.png: 16, 32, 48, 64, 180, 192, 256, 512 px.
+logos/png/favicon.ico: multi-resolution 16/32/48 px favicon.
+The guide and exported graphics share the same source compositions.
+Command specimens use real documented commands, not captured run output.
+
+VOICE
+Clear, capable, warm, and direct. Keep personality in headings and layout.
+In diagnostics, state the issue, limitation, and useful next step.
+Do not imply full parity with hosted CI or claim unmeasured performance.
+Hosted CI continues to provide platform coverage and merge enforcement.
+
+PRODUCT DESCRIPTION
+Bellows runs your existing GitHub Actions workflows locally using act and
+Docker. Preview execution plans, diagnose compatibility issues, and catch
+failures before pushing.
+
+REFERENCES AND PROVENANCE
+Bellows: https://github.com/smeltery/bellows
+Snapshot: 42997255cf14e36cd171fa8bd47dcae84963e933
+Readme and docs/commands.md informed copy and examples.
+Popcorn: https://github.com/smeltery/popcorn/tree/main/assets/brand
+Snapshot: b5b02fe6baff61e7391c0d1f9d9b352094edb03b
+Popcorn informed the completeness of the identity and handoff, including
+asset variants, tokens, fonts, provenance, and consistent applications.
+No Popcorn artwork is included in this kit.
+Space Grotesk: https://github.com/google/fonts/tree/main/ofl/spacegrotesk
+JetBrains Mono: https://github.com/google/fonts/tree/main/ofl/jetbrainsmono
+The supplied fonts retain their upstream license notices.
+This revision uses deterministic vector artwork. No generated mascot
+artwork is included. The earlier mascot experiments were not selected.
+No repository code or public branding settings were changed.

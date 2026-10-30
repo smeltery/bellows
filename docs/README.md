@@ -1,5 +1,10 @@
 # Bellows Docs
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/brand/logos/svg/bellows-reversed.svg">
+  <img src="../assets/brand/logos/svg/bellows-primary.svg" alt="Bellows" width="320">
+</picture>
+
 Bellows runs existing GitHub Actions workflows locally through Docker and
 [`act`](https://github.com/nektos/act), usually from a `pre-push` hook.
 
@@ -38,6 +43,8 @@ Use these docs when adding Bellows to a repository:
 - [troubleshooting.md](troubleshooting.md): fix common local runner issues.
 - [security.md](security.md): understand the local execution security model.
 - [development.md](development.md): develop Bellows itself with Flox.
+- [brand assets and guidelines](../assets/brand/README.md): logos, fonts, colors,
+  and repository artwork.
 
 ## What Bellows Does
 

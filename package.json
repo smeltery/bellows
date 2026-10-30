@@ -2,7 +2,9 @@
   "name": "bellows-checks",
   "private": true,
   "scripts": {
-    "docs": "markdownlint-cli2 && bun scripts/check.ts",
+    "docs": "markdownlint-cli2 && bun scripts/check.ts && bun run brand:check",
+    "brand:check": "bun scripts/brand.ts",
+    "brand:update": "bun scripts/brand.ts --write",
     "budget": "bun scripts/budget.ts"
   },
   "devDependencies": {

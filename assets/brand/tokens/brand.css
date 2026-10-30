@@ -1,0 +1,21 @@
+/* Bellows 02 - sRGB digital tokens. */
+@font-face{font-family:"Space Grotesk";src:url("../fonts/SpaceGrotesk.ttf") format("truetype");font-weight:300 700;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url("../fonts/JetBrainsMono.ttf") format("truetype");font-weight:100 800;font-display:swap}
+:root{
+  --bellows-ink: #191C22;
+  --bellows-paper: #F5F3ED;
+  --bellows-ember: #F06A43;
+  --bellows-clay: #F2D8CC;
+  --bellows-steel: #626B75;
+  --bellows-burnt-ember: #A9361C;
+  --bellows-text-on-dark: #BBC2CA;
+  --bellows-surface-dark: #242931;
+  --bellows-border: #DADBD5;
+  --bellows-success: #2C6B50;
+  --bellows-warning: #805B00;
+  --bellows-error: #B23635;
+  --bellows-font-sans: "Space Grotesk", system-ui, sans-serif;
+  --bellows-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --bellows-radius: 8px;
+  --bellows-unit: 4px;
+}
