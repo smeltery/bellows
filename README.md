@@ -1,4 +1,6 @@
-# Bellows 🔥🪨
+# Bellows
+
+![Bellows: Keep the feedback close. Run GitHub Actions locally before you push.](assets/brand/applications/readme-banner.png)
 
 [![CI](https://github.com/smeltery/bellows/actions/workflows/ci.yml/badge.svg)](https://github.com/smeltery/bellows/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/smeltery/bellows)](https://github.com/smeltery/bellows/releases)
@@ -51,5 +53,8 @@ make check
 The locked Flox environment supplies the toolchain; Bun runs documentation and
 source-budget checks. Hooks and CI use the same Make targets. See
 [development](docs/development.md) and [releases](docs/releases.md).
+
+Brand assets, fonts, tokens, and usage guidance live in
+[assets/brand](assets/brand/README.md).
 
 Licensed under [PolyForm Shield 1.0.0](LICENSE).

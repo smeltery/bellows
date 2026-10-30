@@ -1,5 +1,5 @@
 {
-  "globs": ["*.md", "docs/**/*.md", "examples/**/*.md"],
+  "globs": ["*.md", "docs/**/*.md", "examples/**/*.md", "assets/brand/**/*.md"],
   "config": {
     "default": true,
     "MD013": false,

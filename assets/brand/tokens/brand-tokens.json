@@ -1,0 +1,64 @@
+{
+  "name": "Bellows",
+  "version": "2.0-proposal",
+  "colors": {
+    "ink": "#191C22",
+    "paper": "#F5F3ED",
+    "ember": "#F06A43",
+    "clay": "#F2D8CC",
+    "steel": "#626B75",
+    "burnt-ember": "#A9361C",
+    "text-on-dark": "#BBC2CA",
+    "surface-dark": "#242931",
+    "border": "#DADBD5",
+    "success": "#2C6B50",
+    "warning": "#805B00",
+    "error": "#B23635"
+  },
+  "fonts": {
+    "sans": "Space Grotesk",
+    "mono": "JetBrains Mono"
+  },
+  "type": {
+    "display": {
+      "size": 64,
+      "lineHeight": 68,
+      "weight": 600
+    },
+    "heading": {
+      "size": 32,
+      "lineHeight": 38,
+      "weight": 600
+    },
+    "body": {
+      "size": 16,
+      "lineHeight": 26,
+      "weight": 400
+    },
+    "utility": {
+      "size": 12,
+      "lineHeight": 18,
+      "weight": 500
+    }
+  },
+  "layout": {
+    "unit": 4,
+    "radius": 8
+  },
+  "logo": {
+    "clearSpace": "1/4 symbol height",
+    "minimumSymbolHeightPx": 16,
+    "minimumLockupWidthPx": 160
+  },
+  "contrast": {
+    "#191C22 on #F5F3ED": 15.38,
+    "#191C22 on #F06A43": 5.56,
+    "#F5F3ED on #191C22": 15.38,
+    "#BBC2CA on #191C22": 9.49,
+    "#626B75 on #F5F3ED": 4.88,
+    "#A9361C on #F5F3ED": 5.86,
+    "#2C6B50 on #F5F3ED": 5.69,
+    "#805B00 on #F5F3ED": 5.54,
+    "#B23635 on #F5F3ED": 5.45
+  }
+}

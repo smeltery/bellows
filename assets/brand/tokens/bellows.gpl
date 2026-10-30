@@ -1,0 +1,16 @@
+GIMP Palette
+Name: Bellows 02
+Columns: 5
+#
+ 25  28  34  ink
+245 243 237  paper
+240 106  67  ember
+242 216 204  clay
+ 98 107 117  steel
+169  54  28  burnt-ember
+187 194 202  text-on-dark
+ 36  41  49  surface-dark
+218 219 213  border
+ 44 107  80  success
+128  91   0  warning
+178  54  53  error
